@@ -336,7 +336,7 @@ if (isset($_POST['add_product'])) {
                                     <td><?php echo htmlspecialchars($row->product_category); ?></td>
                                     <td><?php echo htmlspecialchars($row->supplier); ?></td>
                                     <td>
-                                        <?php if ($_SESSION['role'] == "Admin") { ?>
+                                        <?php if ($_SESSION['role'] == "Admin" || $_SESSION['role'] == "storekeeper") { ?>
                                             <button type="button" class="btn btn-danger btn-sm delete-btn"
                                                 data-id="<?php echo $row->product_id; ?>"
                                                 data-code="<?php echo htmlspecialchars($row->product_code); ?>"

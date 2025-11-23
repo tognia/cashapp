@@ -205,6 +205,8 @@ if (isset($_POST['submit'])) {
                         <select class="form-control" name="select_option" required>
                             <option value="">Select Role</option>
                             <option>Admin</option>
+                            <option>storekeeper</option>
+                            <option>Responsable</option>
                             <option>Operator</option>
                             <option>Responsable</option>
                         </select>
