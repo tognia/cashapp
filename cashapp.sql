@@ -77,6 +77,29 @@ INSERT INTO `agence` (`id`, `code_agence`, `libelle_agence`, `email`, `tel`, `vi
 
 -- --------------------------------------------------------
 
+CREATE TABLE IF NOT EXISTS `tbl_product_shipment` (
+  `shipment_id` INT(11) NOT NULL AUTO_INCREMENT,
+  `shipment_date` DATE NOT NULL,
+  `product_id` INT(11) NOT NULL,
+  `shipped_quantity` INT(11) NOT NULL,
+  `destination_agence_id` INT(11) NOT NULL,
+  `user_id` INT(11) NOT NULL,
+  `delivery_status` VARCHAR(50) NOT NULL DEFAULT 'Pending',
+  `notes` VARCHAR(500) DEFAULT NULL,
+  PRIMARY KEY (`shipment_id`),
+  KEY `fk_ship_product_id` (`product_id`),
+  KEY `fk_ship_user_id` (`user_id`),
+  KEY `fk_ship_agence_id` (`destination_agence_id`),
+  
+  -- Clés étrangères (Foreign Keys)
+  CONSTRAINT `fk_ship_product_id` FOREIGN KEY (`product_id`) REFERENCES `tbl_product` (`product_id`) ON DELETE RESTRICT ON UPDATE CASCADE,
+  CONSTRAINT `fk_ship_user_id` FOREIGN KEY (`user_id`) REFERENCES `tbl_user` (`user_id`) ON DELETE RESTRICT ON UPDATE CASCADE,
+  -- ATTENTION: Le moteur de stockage de 'agence' est MyISAM, qui ne supporte pas les FOREIGN KEYs. 
+  -- Pour des raisons de cohérence de données, il est fortement recommandé de changer 'agence' en InnoDB.
+  CONSTRAINT `fk_ship_agence_id` FOREIGN KEY (`destination_agence_id`) REFERENCES `agence` (`id`) ON DELETE RESTRICT ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+
+-----------------------------------------------------------
 --
 -- Structure de la table `category`
 --
@@ -987,6 +1010,22 @@ INSERT INTO `tbl_invoice_detail_client` (`id`, `invoice_id`, `product_id`, `prod
 (145, 204, 0, 'DA0001', 'Prise reseaux', 5, 'U', 65000, 325000, '2021-09-12', 'ordered');
 
 -- --------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS `tbl_product_receipt` (
+  `receipt_id` INT(11) NOT NULL AUTO_INCREMENT,
+  `receipt_date` DATE NOT NULL,
+  `product_id` INT(11) NOT NULL,
+  `received_quantity` INT(11) NOT NULL,
+  `supplier_name` VARCHAR(200) NOT NULL,
+  `receipt_price` FLOAT(10,2) NOT NULL,
+  `user_id` INT(11) NOT NULL,
+  `notes` VARCHAR(500) DEFAULT NULL,
+  PRIMARY KEY (`receipt_id`),
+  KEY `fk_product_id` (`product_id`),
+  KEY `fk_user_id` (`user_id`),
+  CONSTRAINT `fk_product_id` FOREIGN KEY (`product_id`) REFERENCES `tbl_product` (`product_id`) ON DELETE RESTRICT ON UPDATE CASCADE,
+  CONSTRAINT `fk_user_id` FOREIGN KEY (`user_id`) REFERENCES `tbl_user` (`user_id`) ON DELETE RESTRICT ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 --
 -- Structure de la table `tbl_product`

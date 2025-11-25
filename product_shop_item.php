@@ -19,7 +19,7 @@ if (isset($_POST['select_shop'])) {
     $_SESSION['select_shop'] = $_POST['shop'];
 }
 
-if (($_SESSION['role'] == "Admin" || $_SESSION['role'] == "Responsable") && $_SESSION['select_shop'] != "") {
+if (($_SESSION['role'] == "Admin" || $_SESSION['role'] == "storekeeper" || $_SESSION['role'] == "Responsable") && $_SESSION['select_shop'] != "") {
 
     $shop = $_SESSION['select_shop'];
 }
@@ -97,7 +97,7 @@ if (isset($_GET['status'])) {
 
                     <a href="product_shop_item.php?status=all" class="badge badge-info bg-dark btn-sm">TOUS LES PRODUITS</a>
 
-                    <?php if ($_SESSION["role"] == "Admin") { ?>
+                    <?php if ($_SESSION["role"] == "Admin" || $_SESSION["role"] == "storekeeper") { ?>
 
                         <form action="" method="POST">
 
@@ -179,7 +179,7 @@ if (isset($_GET['status'])) {
                                         <td>
 
                                             <?php
-                                            if ($_SESSION['role'] == "Responsable") {
+                                            if ($_SESSION['role'] == "Responsable" || $_SESSION['role'] == "Admin" || $_SESSION['role'] == "storekeeper") {
                                             ?>
                                                 <a href="edit_stock_shop.php?id=<?php echo $row->product_id; ?>" class="btn btn-info btn-sm"><i class="fa fa-plus"></i></a>
                                             <?php
