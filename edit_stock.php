@@ -196,7 +196,7 @@ include_once 'inc/header_all.php';
 
                             <div class="form-group bg-info" style="padding: 10px; border-radius: 4px;">
                                 <label for="received_quantity" style="color: #0b2e13;">Quantité Reçue à Ajouter <span class="text-danger">*</span></label>
-                                <input type="number" id="received_quantity" min="1" step="1"
+                                <input type="text" id="received_quantity" min="1" step="1"
                                     class="form-control input-lg" name="received_quantity" required
                                     placeholder="Quantité de la livraison"
                                     style="font-size: 1.5em;">

@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Hôte : 127.0.0.1:3306
--- Généré le :  mer. 26 nov. 2025 à 08:34
+-- Généré le :  mer. 19 nov. 2025 à 08:23
 -- Version du serveur :  5.7.26
 -- Version de PHP :  7.2.18
 
@@ -77,6 +77,29 @@ INSERT INTO `agence` (`id`, `code_agence`, `libelle_agence`, `email`, `tel`, `vi
 
 -- --------------------------------------------------------
 
+CREATE TABLE IF NOT EXISTS `tbl_product_shipment` (
+  `shipment_id` INT(11) NOT NULL AUTO_INCREMENT,
+  `shipment_date` DATE NOT NULL,
+  `product_id` INT(11) NOT NULL,
+  `shipped_quantity` INT(11) NOT NULL,
+  `destination_agence_id` INT(11) NOT NULL,
+  `user_id` INT(11) NOT NULL,
+  `delivery_status` VARCHAR(50) NOT NULL DEFAULT 'Pending',
+  `notes` VARCHAR(500) DEFAULT NULL,
+  PRIMARY KEY (`shipment_id`),
+  KEY `fk_ship_product_id` (`product_id`),
+  KEY `fk_ship_user_id` (`user_id`),
+  KEY `fk_ship_agence_id` (`destination_agence_id`),
+  
+  -- Clés étrangères (Foreign Keys)
+  CONSTRAINT `fk_ship_product_id` FOREIGN KEY (`product_id`) REFERENCES `tbl_product` (`product_id`) ON DELETE RESTRICT ON UPDATE CASCADE,
+  CONSTRAINT `fk_ship_user_id` FOREIGN KEY (`user_id`) REFERENCES `tbl_user` (`user_id`) ON DELETE RESTRICT ON UPDATE CASCADE,
+  -- ATTENTION: Le moteur de stockage de 'agence' est MyISAM, qui ne supporte pas les FOREIGN KEYs. 
+  -- Pour des raisons de cohérence de données, il est fortement recommandé de changer 'agence' en InnoDB.
+  CONSTRAINT `fk_ship_agence_id` FOREIGN KEY (`destination_agence_id`) REFERENCES `agence` (`id`) ON DELETE RESTRICT ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+
+-----------------------------------------------------------
 --
 -- Structure de la table `category`
 --
@@ -600,7 +623,7 @@ CREATE TABLE IF NOT EXISTS `tbl_category` (
   `cat_level` int(11) NOT NULL,
   PRIMARY KEY (`cat_id`),
   UNIQUE KEY `cat_name` (`cat_name`)
-) ENGINE=InnoDB AUTO_INCREMENT=28 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=27 DEFAULT CHARSET=latin1;
 
 --
 -- Déchargement des données de la table `tbl_category`
@@ -626,10 +649,10 @@ INSERT INTO `tbl_category` (`cat_id`, `cat_name`, `cat_parent`, `cat_level`) VAL
 (20, 'schneider', 'stylo', 2),
 (21, 'crystal', 'bic', 3),
 (22, 'Raclette Europe', 'Acune', 3),
+(23, '', 'Aucune', 3),
 (24, 'Luminaires', 'Aucune', 3),
 (25, 'ZOOO', 'Aucune', 3),
-(26, 'Lampes ZOOM', 'Aucune', 3),
-(27, 'OKOK SUCRE', 'Aucune', 3);
+(26, 'Lampes ZOOM', 'Aucune', 3);
 
 -- --------------------------------------------------------
 
@@ -988,6 +1011,22 @@ INSERT INTO `tbl_invoice_detail_client` (`id`, `invoice_id`, `product_id`, `prod
 
 -- --------------------------------------------------------
 
+CREATE TABLE IF NOT EXISTS `tbl_product_receipt` (
+  `receipt_id` INT(11) NOT NULL AUTO_INCREMENT,
+  `receipt_date` DATE NOT NULL,
+  `product_id` INT(11) NOT NULL,
+  `received_quantity` INT(11) NOT NULL,
+  `supplier_name` VARCHAR(200) NOT NULL,
+  `receipt_price` FLOAT(10,2) NOT NULL,
+  `user_id` INT(11) NOT NULL,
+  `notes` VARCHAR(500) DEFAULT NULL,
+  PRIMARY KEY (`receipt_id`),
+  KEY `fk_product_id` (`product_id`),
+  KEY `fk_user_id` (`user_id`),
+  CONSTRAINT `fk_product_id` FOREIGN KEY (`product_id`) REFERENCES `tbl_product` (`product_id`) ON DELETE RESTRICT ON UPDATE CASCADE,
+  CONSTRAINT `fk_user_id` FOREIGN KEY (`user_id`) REFERENCES `tbl_user` (`user_id`) ON DELETE RESTRICT ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+
 --
 -- Structure de la table `tbl_product`
 --
@@ -1014,7 +1053,7 @@ CREATE TABLE IF NOT EXISTS `tbl_product` (
   `img` varchar(200) NOT NULL,
   PRIMARY KEY (`product_id`),
   UNIQUE KEY `product_code` (`product_code`,`product_name`)
-) ENGINE=InnoDB AUTO_INCREMENT=36 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=35 DEFAULT CHARSET=latin1;
 
 --
 -- Déchargement des données de la table `tbl_product`
@@ -1030,77 +1069,9 @@ INSERT INTO `tbl_product` (`product_id`, `product_code`, `product_sku`, `product
 (23, 'CABLEVR35²ROUGET500', '0000', 'CABLE ALIMENTATION', 'FILS ET CABLES', 'EUROPE', 'REXEL', 675, 700, 695, 0, 500, 100, 'm', 'CABLE ALIMENTION ', '8', '8', '65beca39c061f.jpg'),
 (24, 'CABLEVR35²BLEUT500', '0000', 'CABLE ALIMENTATION ALU', 'FILS ET CABLES', 'EUROPE', 'REXEL', 675, 700, 695, 0, 500, 100, 'm', 'CABLE ALIMENTATION', '8', '8', '65becaed3a331.jpg'),
 (25, 'ICTA32AF', 'ICTA32AF', 'GAINE ICTA32', 'CONDUITS,CANALISATIONS', 'COURANT', 'SDME', 550, 750, 745, 745, 5000, 500, 'm', 'GAINE ICTA 32', '1', '2', '65edc50d7842f.jpg'),
-(30, '56666', '66666', 'Ampoule Bouillie', 'Luminaires', 'JDJDJJ', 'OKOK chaud Manioc', 200, 500, 300, 0, 40, 5, 'U', 'NNNCNC', 'jdjdjJ', 'JSJSJ', '669ed3f307250.jpg'),
+(30, '56666', '66666', 'Ampoule Bouillie', 'Luminaires', 'JDJDJJ', 'OKOK chaud Manioc', 200, 500, 300, 0, 53, 5, 'U', 'NNNCNC', 'jdjdjJ', 'JSJSJ', '669ed3f307250.jpg'),
 (33, '0000071', '0000071', 'LE BOBOLO', 'Accessoires et autre appareillage terminal', 'MOATE', 'MOATE', 100, 200, 150, 0, 15, 10, 'U', 'BOBOLO', 'RAS', 'RAS', '66a15f7c756bc.jpg'),
-(34, '000072', '000072', 'Namwondo', 'Accessoires et autre appareillage terminal', 'MOATE-NAM', 'MOATE-NAM', 100, 200, 150, 0, 45, 2, 'U', 'Namwondo', 'RAS', 'RAS', '66a160b921832.jpg'),
-(35, 'CA000233', '002CA000233', 'ZOBAZO', 'Accessoires et autre appareillage terminal', 'oko', 'OKOK chaud Manioc', 2500, 5000, 4000, 0, 40, 5, 'U', 'CA000233CA000233CA000233', 'RAS', 'RAS', '691ea6088d957.jpg');
-
--- --------------------------------------------------------
-
---
--- Structure de la table `tbl_product_receipt`
---
-
-DROP TABLE IF EXISTS `tbl_product_receipt`;
-CREATE TABLE IF NOT EXISTS `tbl_product_receipt` (
-  `receipt_id` int(11) NOT NULL AUTO_INCREMENT,
-  `receipt_date` date NOT NULL,
-  `product_id` int(11) NOT NULL,
-  `received_quantity` int(11) NOT NULL,
-  `supplier_name` varchar(200) NOT NULL,
-  `receipt_price` float(10,2) NOT NULL,
-  `user_id` int(11) NOT NULL,
-  `notes` varchar(500) DEFAULT NULL,
-  PRIMARY KEY (`receipt_id`),
-  KEY `fk_product_id` (`product_id`),
-  KEY `fk_user_id` (`user_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=latin1;
-
---
--- Déchargement des données de la table `tbl_product_receipt`
---
-
-INSERT INTO `tbl_product_receipt` (`receipt_id`, `receipt_date`, `product_id`, `received_quantity`, `supplier_name`, `receipt_price`, `user_id`, `notes`) VALUES
-(1, '2025-11-24', 35, 20, 'OKOK chaud Manioc', 2500.00, 6, NULL),
-(2, '2025-11-25', 35, 10, 'OKOK chaud Manioc', 2500.00, 17, NULL),
-(3, '2025-11-26', 35, 49, 'OKOK chaud Manioc', 2500.00, 17, NULL),
-(4, '2025-11-26', 35, 1, 'OKOK chaud Manioc', 2500.00, 17, NULL);
-
--- --------------------------------------------------------
-
---
--- Structure de la table `tbl_product_shipment`
---
-
-DROP TABLE IF EXISTS `tbl_product_shipment`;
-CREATE TABLE IF NOT EXISTS `tbl_product_shipment` (
-  `shipment_id` int(11) NOT NULL AUTO_INCREMENT,
-  `shipment_date` date NOT NULL,
-  `product_id` int(11) NOT NULL,
-  `shipped_quantity` int(11) NOT NULL,
-  `code_agence` varchar(30) NOT NULL,
-  `user_id` varchar(25) NOT NULL,
-  `delivery_status` varchar(50) NOT NULL DEFAULT 'Pending',
-  `notes` varchar(500) DEFAULT NULL,
-  PRIMARY KEY (`shipment_id`),
-  KEY `fk_ship_product_id` (`product_id`),
-  KEY `fk_ship_user_id` (`user_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=latin1;
-
---
--- Déchargement des données de la table `tbl_product_shipment`
---
-
-INSERT INTO `tbl_product_shipment` (`shipment_id`, `shipment_date`, `product_id`, `shipped_quantity`, `code_agence`, `user_id`, `delivery_status`, `notes`) VALUES
-(1, '2025-11-25', 91, 30, '', '17', 'Delivered', 'Delivered'),
-(2, '2025-11-25', 91, 20, '', '17', 'Delivered', ''),
-(3, '2025-11-25', 91, 15, '', '17', 'Delivered', ''),
-(4, '2025-11-25', 91, 15, '0', '17', 'Delivered', ''),
-(5, '2025-11-25', 91, 10, 'Eleveur', '17', 'Delivered', ''),
-(6, '2025-11-25', 91, 10, '0', '17', 'Delivered', ''),
-(7, '2025-11-26', 91, 9, '0', '17', 'Delivered', ''),
-(8, '2025-11-26', 91, 1, '0', '17', 'Delivered', ''),
-(9, '2025-11-26', 91, 10, 'Eleveur', 'storekeeper', 'Delivered', '');
+(34, '000072', '000072', 'Namwondo', 'Accessoires et autre appareillage terminal', 'MOATE-NAM', 'MOATE-NAM', 100, 200, 150, 0, 45, 2, 'U', 'Namwondo', 'RAS', 'RAS', '66a160b921832.jpg');
 
 -- --------------------------------------------------------
 
@@ -1170,7 +1141,7 @@ CREATE TABLE IF NOT EXISTS `tbl_shop_item` (
   `place_in_store` varchar(50) NOT NULL,
   `img` varchar(200) NOT NULL,
   PRIMARY KEY (`product_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=92 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=88 DEFAULT CHARSET=latin1;
 
 --
 -- Déchargement des données de la table `tbl_shop_item`
@@ -1249,7 +1220,7 @@ INSERT INTO `tbl_shop_item` (`product_id`, `shop_code`, `product_code`, `product
 (70, 'bev_oyomabang', '555555', '6666666', 'Ampoule', '', 'Zoook', 'OKOK chaud Manioc', 200, 500, 300, 0, 0, 0, 'U', 'Pouozzo', 'papapap', '66866f065391c.png'),
 (71, 'bev_Biyemassi', '555555', '6666666', 'Ampoule', '', 'Zoook', 'OKOK chaud Manioc', 200, 500, 300, 0, 0, 0, 'U', 'Pouozzo', 'papapap', '66866f065391c.png'),
 (72, 'leti_nkolbisson', '555555', '6666666', 'Ampoule', '', 'Zoook', 'OKOK chaud Manioc', 200, 500, 300, 0, 0, 0, 'U', 'Pouozzo', 'papapap', '66866f065391c.png'),
-(73, 'bev_oyomabang', '56666', '66666', 'Ampoule Bouillie', 'Luminaires', 'JDJDJJ', 'OKOK chaud Manioc', 200, 500, 300, 0, 13, 5, 'U', 'NNNCNC', 'JSJSJ', '669ed3f307250.jpg'),
+(73, 'bev_oyomabang', '56666', '66666', 'Ampoule Bouillie', 'Luminaires', 'JDJDJJ', 'OKOK chaud Manioc', 200, 500, 300, 0, 0, 5, 'U', 'NNNCNC', 'JSJSJ', '669ed3f307250.jpg'),
 (74, 'bev_Biyemassi', '56666', '66666', 'Ampoule Bouillie', 'Luminaires', 'JDJDJJ', 'OKOK chaud Manioc', 200, 500, 300, 0, 0, 5, 'U', 'NNNCNC', 'JSJSJ', '669ed3f307250.jpg'),
 (75, 'leti_nkolbisson', '56666', '66666', 'Ampoule Bouillie', 'Luminaires', 'JDJDJJ', 'OKOK chaud Manioc', 200, 500, 300, 0, 0, 5, 'U', 'NNNCNC', 'JSJSJ', '669ed3f307250.jpg'),
 (76, 'bev_oyomabang', '85858585', '5858585', 'AA Ampoule', 'Accessoires et autre appareillage terminal', 'Zu', 'OKOK chaud Manioc', 200, 600, 400, 0, 0, 0, 'Kg', 'hddhdh', 'gfrfrfrfr', '668674409c43d.png'),
@@ -1263,11 +1234,7 @@ INSERT INTO `tbl_shop_item` (`product_id`, `shop_code`, `product_code`, `product
 (84, 'leti_nkolbisson', '0000071', '0000071', 'LE BOBOLO', 'Accessoires et autre appareillage terminal', 'MOATE', 'MOATE', 100, 200, 150, 0, 0, 0, 'U', 'BOBOLO', 'RAS', '66a15f7c756bc.jpg'),
 (85, 'bev_oyomabang', '000072', '000072', 'Namwondo', 'Accessoires et autre appareillage terminal', 'MOATE-NAM', 'MOATE-NAM', 100, 200, 150, 0, 0, 0, 'U', 'Namwondo', 'RAS', '66a160b921832.jpg'),
 (86, 'bev_Biyemassi', '000072', '000072', 'Namwondo', 'Accessoires et autre appareillage terminal', 'MOATE-NAM', 'MOATE-NAM', 100, 200, 150, 0, 0, 0, 'U', 'Namwondo', 'RAS', '66a160b921832.jpg'),
-(87, 'leti_nkolbisson', '000072', '000072', 'Namwondo', 'Accessoires et autre appareillage terminal', 'MOATE-NAM', 'MOATE-NAM', 100, 200, 150, 0, 0, 0, 'U', 'Namwondo', 'RAS', '66a160b921832.jpg'),
-(88, 'bev_oyomabang', 'CA000233', '002CA000233', 'ZOBAZO', 'Accessoires et autre appareillage terminal', 'oko', 'OKOK chaud Manioc', 2500, 5000, 4000, 0, 45, 0, 'U', 'CA000233CA000233CA000233', 'RAS', '691ea6088d957.jpg'),
-(89, 'bev_Biyemassi', 'CA000233', '002CA000233', 'ZOBAZO', 'Accessoires et autre appareillage terminal', 'oko', 'OKOK chaud Manioc', 2500, 5000, 4000, 0, 0, 0, 'U', 'CA000233CA000233CA000233', 'RAS', '691ea6088d957.jpg'),
-(90, 'leti_nkolbisson', 'CA000233', '002CA000233', 'ZOBAZO', 'Accessoires et autre appareillage terminal', 'oko', 'OKOK chaud Manioc', 2500, 5000, 4000, 0, 0, 0, 'U', 'CA000233CA000233CA000233', 'RAS', '691ea6088d957.jpg'),
-(91, 'Eleveur', 'CA000233', '002CA000233', 'ZOBAZO', 'Accessoires et autre appareillage terminal', 'oko', 'OKOK chaud Manioc', 2500, 5000, 4000, 0, 120, 0, 'U', 'CA000233CA000233CA000233', 'RAS', '691ea6088d957.jpg');
+(87, 'leti_nkolbisson', '000072', '000072', 'Namwondo', 'Accessoires et autre appareillage terminal', 'MOATE-NAM', 'MOATE-NAM', 100, 200, 150, 0, 0, 0, 'U', 'Namwondo', 'RAS', '66a160b921832.jpg');
 
 -- --------------------------------------------------------
 
@@ -1309,7 +1276,7 @@ CREATE TABLE IF NOT EXISTS `tbl_user` (
   `role` varchar(15) NOT NULL,
   `is_active` tinyint(4) NOT NULL,
   PRIMARY KEY (`user_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=19 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=16 DEFAULT CHARSET=latin1;
 
 --
 -- Déchargement des données de la table `tbl_user`
@@ -1322,9 +1289,7 @@ INSERT INTO `tbl_user` (`user_id`, `username`, `fullname`, `password`, `magasin`
 (9, 'respo', 'NVBZ', '7c222fb2927d828af22f592134e8932480637c0d', 'bev_oyomabang', 'Responsable', 1),
 (12, 'laeticia', 'YAKAM Laeticia', '7c222fb2927d828af22f592134e8932480637c0d', 'bev_oyomabang', 'Admin', 1),
 (13, 'amelia', 'yakam', '7c222fb2927d828af22f592134e8932480637c0d', 'bev_oyomabang', 'Responsable', 1),
-(15, 'OnceAgain', 'OBOBOGO', '7c222fb2927d828af22f592134e8932480637c0d', 'Eleveur', 'Responsable', 1),
-(17, 'storekeeper', 'PEACEFULL', '7c4a8d09ca3762af61e59520943dc26494f8941b', 'Eleveur', 'storekeeper', 1),
-(18, 'operator2', 'OKO', '7c222fb2927d828af22f592134e8932480637c0d', 'Eleveur', 'Operator', 1);
+(15, 'OnceAgain', 'OBOBOGO', '7c222fb2927d828af22f592134e8932480637c0d', 'Eleveur', 'Responsable', 1);
 
 -- --------------------------------------------------------
 
@@ -1394,17 +1359,6 @@ INSERT INTO `users` (`user_id`, `firstname`, `middlename`, `lastname`, `address`
 (13, 'zfzfzfzfzf', 'fzfzfzfzfz', 'zfzfzfzfzfzf', 'NGOUSSO Fabrique', 'trajectoirei@live.fr', '69999999', 'lepile', '7c222fb2927d828af22f592134e8932480637c0d', 'particulier'),
 (14, 'MOISE', ' ', 'NGNOKAM', 'Ngousso Fabrique', 'ngnokamoise@yahoo.fr', '699878271', 'nmoise', '7c222fb2927d828af22f592134e8932480637c0d', 'particulier'),
 (15, 'BOBIBO', 'BOBIBO', 'BOBIBO', 'BOBIBO', 'awarenessera40@gmail.com', '000065', 'htognia', '7c222fb2927d828af22f592134e8932480637c0d', 'particulier');
-
---
--- Contraintes pour les tables déchargées
---
-
---
--- Contraintes pour la table `tbl_product_receipt`
---
-ALTER TABLE `tbl_product_receipt`
-  ADD CONSTRAINT `fk_product_id` FOREIGN KEY (`product_id`) REFERENCES `tbl_product` (`product_id`) ON UPDATE CASCADE,
-  ADD CONSTRAINT `fk_user_id` FOREIGN KEY (`user_id`) REFERENCES `tbl_user` (`user_id`) ON UPDATE CASCADE;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

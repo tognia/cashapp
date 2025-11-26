@@ -52,7 +52,7 @@ try {
     $desc_db = $shop_item['description'];
     $product_img = $shop_item['img'];
     $stock_db = $shop_item['stock']; // Current shop stock
-    $current_shop_id = $shopCode_db; // Assuming shop_id is available in tbl_shop_item or can be derived
+    $_SESSION['shop_code'] = $shopCode_db; // Store shop code in session if needed
 
     // --- 2b. Fetch product data from main product table (for main stock) ---
     $select_product = $pdo->prepare("SELECT stock FROM tbl_product WHERE product_code = :product_code");
@@ -99,21 +99,23 @@ if (isset($_POST['update_product'])) {
             $message = '<div class="alert alert-danger">Stock insuffisant dans l\'entrepôt principal. Disponible : ' . $stock_db1 . '</div>';
         } else {
             try {
+
+
                 // Transactional updates for data consistency
                 $pdo->beginTransaction();
 
                 // 3a. INSERT record into tbl_product_shipment
                 // Note: destination_agence_id must be retrieved from the shop_item's shop_id
                 $insert_shipment = $pdo->prepare("
-                    INSERT INTO tbl_product_shipment (shipment_date, product_id, shipped_quantity, destination_agence_id, user_id, delivery_status, notes)
-                    VALUES (:date, :product_id, :quantity, :agence_id, :user_id, :status, :notes)
+                    INSERT INTO tbl_product_shipment (shipment_date, product_id, shipped_quantity, code_agence, user_id, delivery_status, notes)
+                    VALUES (:date, :product_id, :quantity, :code_agence, :user_id, :status, :notes)
                 ");
 
                 $insert_shipment->bindParam(':date', $shipment_date);
                 $insert_shipment->bindParam(':product_id', $id_db, PDO::PARAM_INT);
                 $insert_shipment->bindParam(':quantity', $stock_to_ship, PDO::PARAM_INT);
-                $insert_shipment->bindParam(':agence_id', $shopCode_db, PDO::PARAM_INT); // Using shop_id as agence_id
-                $insert_shipment->bindParam(':user_id', $current_user_id, PDO::PARAM_INT);
+                $insert_shipment->bindParam(':code_agence',  $_SESSION['shop_code']);
+                $insert_shipment->bindParam(':user_id', $_SESSION['user_name']);
                 // Status is 'Delivered' as per the requirement for immediate update
                 $status_delivered = 'Delivered';
                 $insert_shipment->bindParam(':status', $status_delivered);
@@ -187,7 +189,7 @@ include_once 'inc/header_all.php';
                             <input type="hidden" name="product_id" value="<?php echo htmlspecialchars($id_db); ?>">
                             <div class="form-group">
                                 <label>Boutique</label>
-                                <input type="text" class="form-control" value="<?php echo htmlspecialchars($shopCode_db); ?>" readonly>
+                                <input type="text" class="form-control" value="<?php echo htmlspecialchars($shopCode_db); ?>" disabled>
                             </div>
                             <div class="form-group">
                                 <label>Code Produit</label>
@@ -197,7 +199,7 @@ include_once 'inc/header_all.php';
                             <hr style="margin-top: 5px;">
                             <div class="form-group">
                                 <label>Stock Actuel en Boutique</label>
-                                <input type="number" class="form-control" value="<?php echo htmlspecialchars($stock_db); ?>" readonly>
+                                <input type="number" class="form-control" value="<?php echo htmlspecialchars($stock_db); ?>">
                             </div>
                             <div class="form-group">
                                 <label>Stock Principal (Entrepôt)</label>
@@ -211,10 +213,10 @@ include_once 'inc/header_all.php';
 
                             <div class="form-group bg-warning" style="padding: 10px; border-radius: 4px;">
                                 <label for="stock_to_ship" style="color: #66512c;">Quantité à Expédier <span class="text-danger">*</span></label>
-                                <input type="number" id="stock_to_ship" min="1" step="1"
+                                <input type="text" id="stock_to_ship" min="1" step="1"
                                     max="<?php echo htmlspecialchars($stock_db1); ?>"
                                     class="form-control input-lg" name="stock_to_ship" required
-                                    placeholder="Quantité à expédier (Max: <?php echo htmlspecialchars($stock_db1); ?>)"
+                                    placeholder="Qté à expédier (Max: <?php echo htmlspecialchars($stock_db1); ?>)"
                                     style="font-size: 1.5em;">
                                 <span class="help-block">Cette quantité sera déduite de l'entrepôt principal.</span>
                             </div>
