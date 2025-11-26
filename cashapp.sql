@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Hôte : 127.0.0.1:3306
--- Généré le :  mer. 26 nov. 2025 à 08:34
+-- Généré le :  mer. 26 nov. 2025 à 16:36
 -- Version du serveur :  5.7.26
 -- Version de PHP :  7.2.18
 
@@ -70,9 +70,6 @@ CREATE TABLE IF NOT EXISTS `agence` (
 --
 
 INSERT INTO `agence` (`id`, `code_agence`, `libelle_agence`, `email`, `tel`, `ville`) VALUES
-(1, 'bev_oyomabang', 'Bevilec Oyomabang', 'trajectoirei@live.fr', '672569213', 'Yaounde'),
-(2, 'bev_Biyemassi', 'Bevilec Carrefour Biyemassi', 'trajectoirei@live.fr', '699456700', 'Yaounde'),
-(3, 'leti_nkolbisson', 'plus elec cameroun Sarl', 'yakamamelie23@gmail.com', '655762258', 'Yaounde'),
 (5, 'Eleveur', 'Eleveur', '', '000002222', 'Yaounde');
 
 -- --------------------------------------------------------
@@ -607,29 +604,7 @@ CREATE TABLE IF NOT EXISTS `tbl_category` (
 --
 
 INSERT INTO `tbl_category` (`cat_id`, `cat_name`, `cat_parent`, `cat_level`) VALUES
-(4, 'Appareillage Terminal', 'Appareillage Terminal et raccordement batiment', 2),
-(5, 'Appareillage Terminal et raccordement batiment', 'Aucune', 1),
-(6, 'Accessoires et autre appareillage terminal', 'Appareillage Terminal', 3),
-(7, 'Antivandale', 'Appareillage Terminal', 3),
-(8, 'Boite Encastrement', 'Appareillage Terminal et raccordement batiment', 2),
-(9, 'Accessoires et autre boite encastrement', 'Boite Encastrement', 3),
-(10, 'Boite beton', 'Boite Encastrement', 3),
-(11, 'Communication et securite', 'Aucune', 1),
-(12, 'Acces', 'Communication et securite', 2),
-(13, 'Communication  du batiment', 'Communication et securite', 2),
-(14, 'Accessoires de fermeture', 'Acces', 3),
-(15, 'Automatisme ouverture', 'Acces', 3),
-(16, 'Audiovisuel et sonorisation', 'Communication du batiment', 3),
-(17, 'Detection de presence et mouvement', 'Communication du batiment', 3),
-(18, 'stylo', 'Aucune', 1),
-(19, 'bic', 'stylo', 2),
-(20, 'schneider', 'stylo', 2),
-(21, 'crystal', 'bic', 3),
-(22, 'Raclette Europe', 'Acune', 3),
-(24, 'Luminaires', 'Aucune', 3),
-(25, 'ZOOO', 'Aucune', 3),
-(26, 'Lampes ZOOM', 'Aucune', 3),
-(27, 'OKOK SUCRE', 'Aucune', 3);
+(6, 'Accessoires et autre appareillage terminal', 'Appareillage Terminal', 3);
 
 -- --------------------------------------------------------
 
@@ -711,42 +686,6 @@ CREATE TABLE IF NOT EXISTS `tbl_invoice` (
   PRIMARY KEY (`invoice_id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=138 DEFAULT CHARSET=latin1;
 
---
--- Déchargement des données de la table `tbl_invoice`
---
-
-INSERT INTO `tbl_invoice` (`invoice_id`, `cashier_name`, `id_client`, `order_date`, `time_order`, `total`, `paid`, `due`, `remise`, `tva`, `payment_mode`) VALUES
-(93, 'tnh', 'topsi', '2021-04-22', '19:44', 65000, 70000, -5000, 0, 0, ''),
-(95, 'tnh', '', '2021-04-26', '05:01', 705000, 710000, -5000, 0, 0, ''),
-(96, 'tnh', '', '2021-04-26', '10:40', 573500, 580000, -6500, 0, 0, ''),
-(97, 'tnh', '', '2021-04-26', '18:57', 475000, 480000, -5000, 0, 0, ''),
-(98, 'tnh', 'okok', '2021-06-06', '18:31', 320000, 320000, 0, 0, 0, ''),
-(99, 'tnh', 'okok', '2021-06-09', '16:44', 301400, 305000, -3600, 0, 0, ''),
-(100, 'tnh', 'common', '2021-07-03', '16:51', 195000, 190000, 5000, 0, 0, ''),
-(101, 'tnh', 'common', '2021-07-03', '16:54', 2800, 5000, -2200, 0, 0, ''),
-(103, 'tnh', 'common', '2021-07-07', '13:28', 22500, 25000, -2500, 0, 0, ''),
-(105, 'tnh', 'common', '2021-07-19', '16:33', 90250, 100000, -9750, 4750, 0, ''),
-(106, 'tnh', 'common', '2021-07-19', '16:35', 216000, 220000, -4000, 24000, 0, ''),
-(108, 'good', 'common', '2021-09-07', '06:11', 475000, 480000, -5000, 0, 0, ''),
-(109, 'caissier', 'common', '2021-09-08', '08:33', 2375, 2500, -125, 0, 0, ''),
-(110, 'caissier', 'common', '2021-09-08', '08:40', 1625, 2000, -375, 0, 0, ''),
-(111, 'caissier', 'common', '2021-09-08', '12:54', 875, 1000, -125, 0, 0, ''),
-(122, 'caissier', 'common', '2021-09-10', '11:40', 3250, 5000, -1750, 0, 0, ''),
-(124, 'operator1', 'common', '2021-09-12', '15:49', 8075000, 8075000, 8075000, 425001, 0, ''),
-(125, 'operator1', 'common', '2022-06-09', '04:49', 3500, 4000, -500, 0, 0, ''),
-(126, 'operator1', 'common', '2022-07-31', '17:42', 302100, 305000, -2900, 0, 0, ''),
-(127, 'operator1', 'tnh', '2023-05-27', '14:35', 230000, 230000, 0, 0, 0, ''),
-(128, 'operator1', 'okok', '2023-05-27', '14:37', 119450, 125000, -5550, 6250, 0, ''),
-(129, 'operator1', 'nmoise', '2023-08-05', '07:28', 145000, 150000, -5000, 0, 0, ''),
-(130, 'operator1', 'common', '2023-08-22', '22:23', 6000, 10000, -4000, 0, 0, ''),
-(131, 'operator1', 'common', '2023-08-26', '18:57', 18000, 25000, -7000, 0, 0, ''),
-(132, 'operator1', 'common', '2023-12-31', '08:36', 18000, 20000, -2000, 0, 0, ''),
-(133, 'operator1', 'common', '2023-12-31', '12:09', 38000, 40000, -2000, 0, 0, ''),
-(134, 'operator1', 'common', '2023-12-31', '17:01', 23000, 25000, -2000, 0, 0, ''),
-(135, 'operator1', 'common', '2023-12-31', '17:03', 41000, 42000, -1000, 0, 0, ''),
-(136, 'operator1', 'common', '2024-03-03', '06:23', 50255, 51000, 745, 4600, 0, ''),
-(137, 'operator1', 'common', '2024-03-06', '05:46', 21465, 25000, 3535, 0, 3465, 'especes');
-
 -- --------------------------------------------------------
 
 --
@@ -768,30 +707,6 @@ CREATE TABLE IF NOT EXISTS `tbl_invoice_client` (
   `infos_paiement` varchar(200) NOT NULL,
   PRIMARY KEY (`invoice_id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=205 DEFAULT CHARSET=latin1;
-
---
--- Déchargement des données de la table `tbl_invoice_client`
---
-
-INSERT INTO `tbl_invoice_client` (`invoice_id`, `id_client`, `name_client`, `order_date`, `time_order`, `total`, `Status`, `moyen_paiement`, `date_paiement`, `time_paiement`, `infos_paiement`) VALUES
-(187, 'topsi', 'FRANCIS DUJARDIN SECEC', '2021-06-03', '13:04', 190000, 'deleted', '', '2021-06-05', '22:07:00', 'dadadaedada'),
-(188, 'topsi', 'FRANCIS DUJARDIN SECEC', '2021-06-03', '13:15', 261400, 'deleted', '', '2021-06-05', '21:38:00', 'daeaeaedeaeaea'),
-(189, 'topsi', 'FRANCIS DUJARDIN SECEC', '2021-06-07', '12:28', 70000, 'ordered', '', '2021-06-07', '12:28:00', ''),
-(190, 'topsi', 'FRANCIS DUJARDIN SECEC', '2021-06-07', '12:46', 152100, 'delivered', '', '2021-06-07', '12:46:00', ''),
-(191, 'topsi', 'FRANCIS DUJARDIN SECEC', '2021-06-11', '07:28', 355000, 'ordered', '', '2021-06-11', '07:28:00', ''),
-(192, 'topsi', 'FRANCIS DUJARDIN SECEC', '2021-06-11', '14:04', 530000, 'ordered', '', '2021-06-11', '14:04:00', ''),
-(193, 'topsi', 'FRANCIS DUJARDIN SECEC', '2021-06-11', '14:47', 95000, 'ordered', '', '2021-06-11', '14:47:00', ''),
-(194, 'topsi', 'FRANCIS DUJARDIN SECEC', '2021-06-12', '15:14', 380000, 'ordered', '', '2021-06-12', '15:14:00', ''),
-(195, 'topsi', 'FRANCIS DUJARDIN SECEC', '2021-07-06', '15:35', 450000, 'ordered', '', '2021-07-06', '15:35:00', ''),
-(196, 'topsi', 'FRANCIS DUJARDIN SECEC', '2021-07-07', '10:16', 255000, 'ordered', '', '2021-07-07', '10:16:00', ''),
-(197, 'topsi', 'FRANCIS DUJARDIN SECEC', '2021-07-10', '17:44', 75000, 'ordered', '', '2021-07-10', '17:44:00', ''),
-(198, 'topsi', 'FRANCIS DUJARDIN SECEC', '2021-07-10', '17:51', 195000, 'ordered', '', '2021-07-10', '17:51:00', ''),
-(199, 'topsi', 'FRANCIS DUJARDIN SECEC', '2021-07-13', '10:51', 160000, 'ordered', '', '2021-07-13', '10:51:00', ''),
-(200, 'topsi', 'FRANCIS DUJARDIN SECEC', '2021-07-13', '11:05', 52100, 'ordered', '', '2021-07-13', '11:05:00', ''),
-(201, 'topsi', 'FRANCIS DUJARDIN SECEC', '2021-07-13', '11:13', 280000, 'ordered', '', '2021-07-13', '11:13:00', ''),
-(202, 'topsi', 'FRANCIS DUJARDIN SECEC', '2021-07-13', '11:21', 320000, 'ordered', '', '2021-07-13', '11:21:00', ''),
-(203, 'topsi', 'FRANCIS DUJARDIN SECEC', '2021-07-13', '11:23', 192800, 'ordered', '', '2021-07-13', '11:23:00', ''),
-(204, 'topsi', 'FRANCIS DUJARDIN SECEC', '2021-09-12', '14:32', 325000, 'ordered', '', '2021-09-12', '14:32:00', '');
 
 -- --------------------------------------------------------
 
@@ -874,59 +789,6 @@ CREATE TABLE IF NOT EXISTS `tbl_invoice_detail` (
   `remise` float NOT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=133 DEFAULT CHARSET=latin1;
-
---
--- Déchargement des données de la table `tbl_invoice_detail`
---
-
-INSERT INTO `tbl_invoice_detail` (`id`, `invoice_id`, `product_id`, `product_code`, `product_name`, `qty`, `product_satuan`, `price`, `total`, `order_date`, `remise`) VALUES
-(68, 93, 15, 'DA0001', 'Bola Lampu Philips', 1, 'Kg', 65000, 65000, '2021-04-22', 0),
-(70, 95, 12, 'TT0040', 'Triplek Sedang', 4, 'Kg', 95000, 380000, '2021-04-26', 0),
-(71, 95, 15, 'DA0001', 'Bola Lampu Philips', 5, 'Kg', 65000, 325000, '2021-04-26', 0),
-(72, 96, 16, 'TT0045', 'dadzada', 5, 'Kg', 700, 3500, '2021-04-26', 0),
-(73, 96, 12, 'TT0040', 'Triplek Sedang', 6, 'Kg', 95000, 570000, '2021-04-26', 0),
-(74, 97, 12, 'TT0040', 'Triplek Sedang', 5, 'Kg', 95000, 475000, '2021-04-26', 0),
-(75, 98, 12, 'TT0040', 'Feuilles contre plaquet', 3, 'm', 95000, 285000, '2021-06-06', 0),
-(76, 98, 14, 'RR0022', 'Round Cable Clips', 1, 'm', 35000, 35000, '2021-06-06', 0),
-(77, 99, 17, 'dsdsds', 'Plaque Interrupteur', 4, 'Kg', 75000, 300000, '2021-06-09', 0),
-(78, 99, 16, 'TT0045', 'Rallonge', 2, 'Kg', 700, 1400, '2021-06-09', 0),
-(79, 100, 15, 'DA0001', 'Prise reseaux', 3, 'U', 65000, 195000, '2021-07-03', 0),
-(80, 101, 16, 'TT0045', 'Rallonge', 4, 'Kg', 700, 2800, '2021-07-03', 0),
-(81, 103, 21, '3333297301220', 'Prise Multifonctions', 3, 'U', 7500, 22500, '2021-07-07', 0),
-(85, 105, 12, 'TT0040', 'Feuilles contre plaquet', 1, 'm', 95000, 90250, '2021-07-19', 4750),
-(86, 106, 22, 'TTTZHZHZ8', 'Table chauffante', 2, 'U', 25000, 45000, '2021-07-19', 5000),
-(87, 106, 12, 'TT0040', 'Feuilles contre plaquet', 2, 'm', 95000, 171000, '2021-07-19', 19000),
-(89, 108, 12, 'TT0040', 'Feuilles contre plaquet', 5, 'm', 95000, 475000, '2021-09-07', 0),
-(90, 109, 24, '670921', 'bic crystal new', 10, 'U', 150, 1500, '2021-09-08', 0),
-(91, 109, 26, '6448889', 'bic ', 5, 'U', 175, 875, '2021-09-08', 0),
-(92, 110, 26, '6448889', 'bic ', 5, 'U', 175, 875, '2021-09-08', 0),
-(93, 110, 24, '670921', 'bic crystal new', 5, 'U', 150, 750, '2021-09-08', 0),
-(94, 111, 49, '6448889', 'bic ', 5, 'U', 175, 875, '2021-09-08', 0),
-(107, 122, 49, '6448889', 'bic ', 10, 'U', 175, 1750, '2021-09-10', 0),
-(108, 122, 43, '670921', 'bic crystal', 10, 'U', 150, 1500, '2021-09-10', 0),
-(110, 124, 32, 'TT0040', 'Feuilles contre plaquet', 68, 'm', 125000, 8075000, '2021-09-12', 425001),
-(111, 125, 35, 'TT0045', 'Rallonge', 5, 'Kg', 700, 3500, '2022-06-09', 0),
-(112, 126, 37, '000010', 'Prise', 3, 'Kg', 100000, 300000, '2022-07-31', 0),
-(113, 126, 35, 'TT0045', 'Rallonge', 3, 'Kg', 700, 2100, '2022-07-31', 0),
-(114, 127, 34, 'DA0001', 'Prise reseaux', 2, 'U', 65000, 130000, '2023-05-27', 0),
-(115, 127, 37, '000010', 'Prise', 1, 'Kg', 100000, 100000, '2023-05-27', 0),
-(116, 128, 32, 'TT0040', 'Feuilles contre plaquet', 1, 'm', 125000, 118750, '2023-05-27', 6250),
-(117, 128, 35, 'TT0045', 'Rallonge', 1, 'Kg', 700, 700, '2023-05-27', 0),
-(118, 129, 39, '3333297301220', 'Prise Multifonctions', 2, 'U', 7500, 15000, '2023-08-05', 0),
-(119, 129, 34, 'DA0001', 'Prise reseaux', 2, 'U', 65000, 130000, '2023-08-05', 0),
-(120, 130, 1, '000001', 'Prise Le Grand', 2, 'U', 3000, 6000, '2023-08-22', 0),
-(121, 131, 1, '000001', 'Prise Le Grand', 1, 'U', 3000, 3000, '2023-08-26', 0),
-(122, 131, 4, '000002', 'Multiprise', 1, 'U', 15000, 15000, '2023-08-26', 0),
-(123, 132, 1, '000001', 'Prise Le Grand', 1, 'U', 3000, 3000, '2023-12-31', 0),
-(124, 132, 4, '000002', 'Multiprise', 1, 'U', 15000, 15000, '2023-12-31', 0),
-(125, 134, 7, '00003', 'Multiprises APC', 1, 'U', 20000, 20000, '2023-12-31', 0),
-(126, 134, 1, '000001', 'Prise Le Grand', 1, 'U', 3000, 3000, '2023-12-31', 0),
-(127, 135, 7, '00003', 'Multiprises APC', 1, 'U', 20000, 20000, '2023-12-31', 0),
-(128, 135, 1, '000001', 'Prise Le Grand', 2, 'U', 3000, 6000, '2023-12-31', 0),
-(129, 135, 4, '000002', 'Multiprise', 1, 'U', 15000, 15000, '2023-12-31', 0),
-(130, 136, 1, '000001', 'Prise Le Grand', 2, 'U', 3000, 5400, '2024-03-03', 600),
-(131, 136, 7, '00003', 'Multiprises APC', 2, 'U', 20000, 36000, '2024-03-03', 4000),
-(132, 137, 1, '000001', 'Prise Le Grand', 6, 'U', 3000, 18000, '2024-03-06', 0);
 
 -- --------------------------------------------------------
 
@@ -1021,18 +883,6 @@ CREATE TABLE IF NOT EXISTS `tbl_product` (
 --
 
 INSERT INTO `tbl_product` (`product_id`, `product_code`, `product_sku`, `product_name`, `product_category`, `product_brand`, `supplier`, `purchase_price`, `sell_price`, `min_price`, `discount`, `stock`, `min_stock`, `product_satuan`, `description`, `place_in_storeroom`, `place_in_store`, `img`) VALUES
-(7, '000002', 'ddddd', 'Multiprise Peaceful Journey 2025', 'Antivandale', 'dsdsdsds 000', 'OKOK chaud Manioc', 10000, 185000, 12000, 0, 44, 7, 'U', 'Multiprise 2024 000 Peaceful', 'dddddqq 000', 'sdsdsdsd 000', '66db80b1d06b6.jpg'),
-(8, '00003', '00003', 'Multiprises APC Close 2035', 'Accessoires et autre appareillage terminal', 'APC', 'OKOK chaud Manioc', 10000, 20000, 18005, 0, 10, 5, 'U', 'So Good 2000 Close', 'A444', 'A45555', '65914ae7ef50a.jpg'),
-(9, '000122222', '55556666', 'Raclette Super Boom95', 'Raclette Europe', 'kkkckckck', 'OKOK chaud Manioc', 1500, 3000, 2500, 0, 55, 20, 'Kg', 'Raclette Europe de bon qualitÃ© Allemande.', 'kdkdkdkkd', 'kdkdkdkdk', '66085a4136e61.jpg'),
-(10, 'H07VU25ROUGEC100', '00000', 'H07 VU 2.5 ROUGE C100 La PAZ', 'Accessoires et autre appareillage terminal', 'EUROPE', 'OKOK chaud Manioc', 196, 297, 287, 1, 18000, 2000, 'm', 'CONDUCTEURS POUR EQUIPEMENTS DES INSTALLATIONS DOMESTIQUES FIXES ET PROTEGEES,LOCAUX D\'HABITATIONS,BUREAUX DANS OU SUR DES DISPOSITIFS D\'ECLAIRAGE ET DE COMMAND,POUR DES TENSIONS JUSQU4A 750V', '1', '1', '660bf499859bd.jpg'),
-(11, 'H07VU25BLEUC100', '0000', 'FILS BLEU', 'FILS ET CABLES', 'EUROPE', 'REXEL', 196, 295, 285, 0, 13000, 2000, 'm', 'CONDUCTEURS POUR EQUIPEMENTS DES INSTALLATIONS DOMESTIQUES FIXES ET PROTEGEES,LOCAUX D\'HABITATIONS,BUREAUX DANS OU SUR DES DISPOSITIFS D\'ECLAIRAGE ET DE COMMAND,POUR DES TENSIONS JUSQU4A 750VFILS RIGIDE 2.5 BLEU ', '1', '2', '65bea2d4062ca.jpg'),
-(22, 'CABLECUIVRENU25²T500', '0000', 'CUIVRE NU', 'FILS ET CABLES', 'EUROPE', 'REXEL', 300, 380, 360, 0, 500, 100, 'm', 'CABLE CUIVRE NU', '7', '7', '65bec6d13a6f1.jpg'),
-(23, 'CABLEVR35²ROUGET500', '0000', 'CABLE ALIMENTATION', 'FILS ET CABLES', 'EUROPE', 'REXEL', 675, 700, 695, 0, 500, 100, 'm', 'CABLE ALIMENTION ', '8', '8', '65beca39c061f.jpg'),
-(24, 'CABLEVR35²BLEUT500', '0000', 'CABLE ALIMENTATION ALU', 'FILS ET CABLES', 'EUROPE', 'REXEL', 675, 700, 695, 0, 500, 100, 'm', 'CABLE ALIMENTATION', '8', '8', '65becaed3a331.jpg'),
-(25, 'ICTA32AF', 'ICTA32AF', 'GAINE ICTA32', 'CONDUITS,CANALISATIONS', 'COURANT', 'SDME', 550, 750, 745, 745, 5000, 500, 'm', 'GAINE ICTA 32', '1', '2', '65edc50d7842f.jpg'),
-(30, '56666', '66666', 'Ampoule Bouillie', 'Luminaires', 'JDJDJJ', 'OKOK chaud Manioc', 200, 500, 300, 0, 40, 5, 'U', 'NNNCNC', 'jdjdjJ', 'JSJSJ', '669ed3f307250.jpg'),
-(33, '0000071', '0000071', 'LE BOBOLO', 'Accessoires et autre appareillage terminal', 'MOATE', 'MOATE', 100, 200, 150, 0, 15, 10, 'U', 'BOBOLO', 'RAS', 'RAS', '66a15f7c756bc.jpg'),
-(34, '000072', '000072', 'Namwondo', 'Accessoires et autre appareillage terminal', 'MOATE-NAM', 'MOATE-NAM', 100, 200, 150, 0, 45, 2, 'U', 'Namwondo', 'RAS', 'RAS', '66a160b921832.jpg'),
 (35, 'CA000233', '002CA000233', 'ZOBAZO', 'Accessoires et autre appareillage terminal', 'oko', 'OKOK chaud Manioc', 2500, 5000, 4000, 0, 40, 5, 'U', 'CA000233CA000233CA000233', 'RAS', 'RAS', '691ea6088d957.jpg');
 
 -- --------------------------------------------------------
@@ -1177,96 +1027,6 @@ CREATE TABLE IF NOT EXISTS `tbl_shop_item` (
 --
 
 INSERT INTO `tbl_shop_item` (`product_id`, `shop_code`, `product_code`, `product_sku`, `product_name`, `product_category`, `product_brand`, `supplier`, `purchase_price`, `sell_price`, `min_price`, `discount`, `stock`, `min_stock`, `product_satuan`, `description`, `place_in_store`, `img`) VALUES
-(1, 'bev_oyomabang', '000001', '00000', 'Prise Le Grand SO Good', 'Accessoires et autre appareillage terminal', 'Ã¹mdmdmd', 'OKOK chaud Manioc', 2000, 3000, 2500, 0, 55, 21, 'U', 'Prise Le Grand 2024', '445555', '64d81e70aac50.jpg'),
-(2, 'bev_Biyemassi', '000001', '00000', 'Prise Le Grand SO Good', 'Accessoires et autre appareillage terminal', 'Ã¹mdmdmd', 'OKOK chaud Manioc', 2000, 3000, 2500, 0, 0, 21, 'U', 'Prise Le Grand 2024', '445555', '64d81e70aac50.jpg'),
-(3, 'leti_nkolbisson', '000001', '00000', 'Prise Le Grand SO Good', 'Accessoires et autre appareillage terminal', 'Ã¹mdmdmd', 'OKOK chaud Manioc', 2000, 3000, 2500, 0, 0, 21, 'U', 'Prise Le Grand 2024', '445555', '64d81e70aac50.jpg'),
-(4, 'bev_oyomabang', '000002', 'ddddd', 'Multiprise Peaceful Journey 2025', 'Antivandale', 'dsdsdsds 000', 'OKOK chaud Manioc', 10000, 185000, 12000, 0, 7, 7, 'U', 'Multiprise 2024 000 Peaceful', 'sdsdsdsd', '66db80b1d06b6.jpg'),
-(5, 'bev_Biyemassi', '000002', 'ddddd', 'Multiprise Peaceful Journey 2025', 'Antivandale', 'dsdsdsds 000', 'OKOK chaud Manioc', 10000, 185000, 12000, 0, 0, 7, 'U', 'Multiprise 2024 000 Peaceful', 'sdsdsdsd', '66db80b1d06b6.jpg'),
-(6, 'leti_nkolbisson', '000002', 'ddddd', 'Multiprise Peaceful Journey 2025', 'Antivandale', 'dsdsdsds 000', 'OKOK chaud Manioc', 10000, 185000, 12000, 0, 0, 7, 'U', 'Multiprise 2024 000 Peaceful', 'sdsdsdsd', '66db80b1d06b6.jpg'),
-(7, 'bev_oyomabang', '00003', '00003', 'Multiprises APC Close 2035', 'Accessoires et autre appareillage terminal', 'APC', 'OKOK chaud Manioc', 10000, 20000, 18005, 0, 8, 5, 'U', 'So Good 2000 Close', 'A45555', '65914ae7ef50a.jpg'),
-(8, 'bev_Biyemassi', '00003', '00003', 'Multiprises APC Close 2035', 'Accessoires et autre appareillage terminal', 'APC', 'OKOK chaud Manioc', 10000, 20000, 18005, 0, 0, 5, 'U', 'So Good 2000 Close', 'A45555', '65914ae7ef50a.jpg'),
-(9, 'leti_nkolbisson', '00003', '00003', 'Multiprises APC Close 2035', 'Accessoires et autre appareillage terminal', 'APC', 'OKOK chaud Manioc', 10000, 20000, 18005, 0, 0, 5, 'U', 'So Good 2000 Close', 'A45555', '65914ae7ef50a.jpg'),
-(10, 'bev_oyomabang', '000122222', '55556666', 'Raclette Super Boom95', 'Raclette Europe', 'kkkckckck', 'OKOK chaud Manioc', 1500, 3000, 2500, 0, 0, 20, 'Kg', 'Raclette Europe de bon qualitÃ© Allemande.', 'kdkdkdkdk', '65e32c7f46e26.jpg'),
-(11, 'bev_Biyemassi', '000122222', '55556666', 'Raclette Super Boom95', 'Raclette Europe', 'kkkckckck', 'OKOK chaud Manioc', 1500, 3000, 2500, 0, 0, 20, 'Kg', 'Raclette Europe de bon qualitÃ© Allemande.', 'kdkdkdkdk', '65e32c7f46e26.jpg'),
-(12, 'leti_nkolbisson', '000122222', '55556666', 'Raclette Super Boom95', 'Raclette Europe', 'kkkckckck', 'OKOK chaud Manioc', 1500, 3000, 2500, 0, 0, 20, 'Kg', 'Raclette Europe de bon qualitÃ© Allemande.', 'kdkdkdkdk', '65e32c7f46e26.jpg'),
-(13, 'bev_oyomabang', '\0H07VU25ROUGEC100', '00000', 'FILS ', 'FILS ET CABLES', 'EUROPE', 'REXEL', 196, 295, 285, 1, 4995, 0, 'm', 'CONDUCTEURS POUR EQUIPEMENTS DES INSTALLATIONS DOMESTIQUES FIXES ET PROTEGEES,LOCAUX D\'HABITATIONS,BUREAUX DANS OU SUR DES DISPOSITIFS D\'ECLAIRAGE ET DE COMMAND,POUR DES TENSIONS JUSQU4A 750V', '1', '65a40054475c6.jpg'),
-(14, 'bev_Biyemassi', '\0H07VU25ROUGEC100', '00000', 'FILS ', 'FILS ET CABLES', 'EUROPE', 'REXEL', 196, 295, 285, 1, 0, 0, 'm', 'CONDUCTEURS POUR EQUIPEMENTS DES INSTALLATIONS DOMESTIQUES FIXES ET PROTEGEES,LOCAUX D\'HABITATIONS,BUREAUX DANS OU SUR DES DISPOSITIFS D\'ECLAIRAGE ET DE COMMAND,POUR DES TENSIONS JUSQU4A 750V', '1', '65a40054475c6.jpg'),
-(15, 'leti_nkolbisson', '\0H07VU25ROUGEC100', '00000', 'FILS ', 'FILS ET CABLES', 'EUROPE', 'REXEL', 196, 295, 285, 1, 0, 0, 'm', 'CONDUCTEURS POUR EQUIPEMENTS DES INSTALLATIONS DOMESTIQUES FIXES ET PROTEGEES,LOCAUX D\'HABITATIONS,BUREAUX DANS OU SUR DES DISPOSITIFS D\'ECLAIRAGE ET DE COMMAND,POUR DES TENSIONS JUSQU4A 750V', '1', '65a40054475c6.jpg'),
-(16, 'bev_oyomabang', 'H07VU25BLEUC100', '0000', 'FILS', 'FILS ET CABLES', 'EUROPE', 'REXEL', 267, 280, 275, 0, 4950, 0, 'm', 'FILS RIGIDE 2.5 BLEU ', '2', '65bea2d4062ca.jpg'),
-(17, 'bev_Biyemassi', 'H07VU25BLEUC100', '0000', 'FILS', 'FILS ET CABLES', 'EUROPE', 'REXEL', 267, 280, 275, 0, 0, 0, 'm', 'FILS RIGIDE 2.5 BLEU ', '2', '65bea2d4062ca.jpg'),
-(18, 'leti_nkolbisson', 'H07VU25BLEUC100', '0000', 'FILS', 'FILS ET CABLES', 'EUROPE', 'REXEL', 267, 280, 275, 0, 0, 0, 'm', 'FILS RIGIDE 2.5 BLEU ', '2', '65bea2d4062ca.jpg'),
-(19, 'bev_oyomabang', 'H07JAUNE', '0000', 'FILS Vert/Jaune bbabab95', 'Accessoires et autre appareillage terminal', 'EUROPE', 'OKOK chaud Manioc', 196, 295, 285, 0, 0, 2000, 'm', 'CONDUCTEURS POUR EQUIPEMENTS DES INSTALLATIONS DOMESTIQUES FIXES ET PROTEGEES,LOCAUX D\'HABITATIONS,BUREAUX DANS OU SUR DES DISPOSITIFS D\'ECLAIRAGE ET DE COMMAND,POUR DES TENSIONS JUSQU4A 750V', '2', '65beb0643352b.jpg'),
-(20, 'bev_Biyemassi', 'H07JAUNE', '0000', 'FILS Vert/Jaune bbabab95', 'Accessoires et autre appareillage terminal', 'EUROPE', 'OKOK chaud Manioc', 196, 295, 285, 0, 0, 2000, 'm', 'CONDUCTEURS POUR EQUIPEMENTS DES INSTALLATIONS DOMESTIQUES FIXES ET PROTEGEES,LOCAUX D\'HABITATIONS,BUREAUX DANS OU SUR DES DISPOSITIFS D\'ECLAIRAGE ET DE COMMAND,POUR DES TENSIONS JUSQU4A 750V', '2', '65beb0643352b.jpg'),
-(21, 'leti_nkolbisson', 'H07JAUNE', '0000', 'FILS Vert/Jaune bbabab95', 'Accessoires et autre appareillage terminal', 'EUROPE', 'OKOK chaud Manioc', 196, 295, 285, 0, 0, 2000, 'm', 'CONDUCTEURS POUR EQUIPEMENTS DES INSTALLATIONS DOMESTIQUES FIXES ET PROTEGEES,LOCAUX D\'HABITATIONS,BUREAUX DANS OU SUR DES DISPOSITIFS D\'ECLAIRAGE ET DE COMMAND,POUR DES TENSIONS JUSQU4A 750V', '2', '65beb0643352b.jpg'),
-(22, 'bev_oyomabang', '\0H07VU15ROUGEC100', '0000', 'FILS', 'FILS ET CABLES', 'EUROPE', 'REXEL', 126, 180, 175, 0, 0, 0, 'm', 'CONDUCTEURS POUR EQUIPEMENTS DES INSTALLATIONS DOMESTIQUES FIXES ET PROTEGEES,LOCAUX D\'HABITATIONS,BUREAUX DANS OU SUR DES DISPOSITIFS D\'ECLAIRAGE ET DE COMMAND,POUR DES TENSIONS JUSQU4A 750V', '2', '65beb33509b28.jpg'),
-(23, 'bev_Biyemassi', '\0H07VU15ROUGEC100', '0000', 'FILS', 'FILS ET CABLES', 'EUROPE', 'REXEL', 126, 180, 175, 0, 0, 0, 'm', 'CONDUCTEURS POUR EQUIPEMENTS DES INSTALLATIONS DOMESTIQUES FIXES ET PROTEGEES,LOCAUX D\'HABITATIONS,BUREAUX DANS OU SUR DES DISPOSITIFS D\'ECLAIRAGE ET DE COMMAND,POUR DES TENSIONS JUSQU4A 750V', '2', '65beb33509b28.jpg'),
-(24, 'leti_nkolbisson', '\0H07VU15ROUGEC100', '0000', 'FILS', 'FILS ET CABLES', 'EUROPE', 'REXEL', 126, 180, 175, 0, 0, 0, 'm', 'CONDUCTEURS POUR EQUIPEMENTS DES INSTALLATIONS DOMESTIQUES FIXES ET PROTEGEES,LOCAUX D\'HABITATIONS,BUREAUX DANS OU SUR DES DISPOSITIFS D\'ECLAIRAGE ET DE COMMAND,POUR DES TENSIONS JUSQU4A 750V', '2', '65beb33509b28.jpg'),
-(25, 'bev_oyomabang', '\0H07VU15BLEU', '0000', 'FILS', 'FILS ET CABLES', 'EUROPE', 'REXEL', 126, 180, 175, 0, 0, 0, 'm', 'CONDUCTEURS POUR EQUIPEMENTS DES INSTALLATIONS DOMESTIQUES FIXES ET PROTEGEES,LOCAUX D\'HABITATIONS,BUREAUX DANS OU SUR DES DISPOSITIFS D\'ECLAIRAGE ET DE COMMAND,POUR DES TENSIONS JUSQU4A 750V', '2', '65beb3b6e4e72.jpg'),
-(26, 'bev_Biyemassi', '\0H07VU15BLEU', '0000', 'FILS', 'FILS ET CABLES', 'EUROPE', 'REXEL', 126, 180, 175, 0, 0, 0, 'm', 'CONDUCTEURS POUR EQUIPEMENTS DES INSTALLATIONS DOMESTIQUES FIXES ET PROTEGEES,LOCAUX D\'HABITATIONS,BUREAUX DANS OU SUR DES DISPOSITIFS D\'ECLAIRAGE ET DE COMMAND,POUR DES TENSIONS JUSQU4A 750V', '2', '65beb3b6e4e72.jpg'),
-(27, 'leti_nkolbisson', '\0H07VU15BLEU', '0000', 'FILS', 'FILS ET CABLES', 'EUROPE', 'REXEL', 126, 180, 175, 0, 0, 0, 'm', 'CONDUCTEURS POUR EQUIPEMENTS DES INSTALLATIONS DOMESTIQUES FIXES ET PROTEGEES,LOCAUX D\'HABITATIONS,BUREAUX DANS OU SUR DES DISPOSITIFS D\'ECLAIRAGE ET DE COMMAND,POUR DES TENSIONS JUSQU4A 750V', '2', '65beb3b6e4e72.jpg'),
-(28, 'bev_oyomabang', '\0H07VU15VERT/JAUNE', '0000', 'FILS', 'FILS ET CABLES', 'EUROPE', 'REXEL', 126, 180, 175, 0, 0, 0, 'm', 'CONDUCTEURS POUR EQUIPEMENTS DES INSTALLATIONS DOMESTIQUES FIXES ET PROTEGEES,LOCAUX D\'HABITATIONS,BUREAUX DANS OU SUR DES DISPOSITIFS D\'ECLAIRAGE ET DE COMMAND,POUR DES TENSIONS JUSQU4A 750V', '2', '65beb445842a9.jpg'),
-(29, 'bev_Biyemassi', '\0H07VU15VERT/JAUNE', '0000', 'FILS', 'FILS ET CABLES', 'EUROPE', 'REXEL', 126, 180, 175, 0, 0, 0, 'm', 'CONDUCTEURS POUR EQUIPEMENTS DES INSTALLATIONS DOMESTIQUES FIXES ET PROTEGEES,LOCAUX D\'HABITATIONS,BUREAUX DANS OU SUR DES DISPOSITIFS D\'ECLAIRAGE ET DE COMMAND,POUR DES TENSIONS JUSQU4A 750V', '2', '65beb445842a9.jpg'),
-(30, 'leti_nkolbisson', '\0H07VU15VERT/JAUNE', '0000', 'FILS', 'FILS ET CABLES', 'EUROPE', 'REXEL', 126, 180, 175, 0, 0, 0, 'm', 'CONDUCTEURS POUR EQUIPEMENTS DES INSTALLATIONS DOMESTIQUES FIXES ET PROTEGEES,LOCAUX D\'HABITATIONS,BUREAUX DANS OU SUR DES DISPOSITIFS D\'ECLAIRAGE ET DE COMMAND,POUR DES TENSIONS JUSQU4A 750V', '2', '65beb445842a9.jpg'),
-(31, 'bev_oyomabang', 'H07VU15VIOLETC100', '0000', 'FILS', 'FILS ET CABLES', 'EUROPE', 'REXEL', 126, 180, 175, 0, 0, 0, 'm', 'CONDUCTEURS POUR EQUIPEMENTS DES INSTALLATIONS DOMESTIQUES FIXES ET PROTEGEES,LOCAUX D\'HABITATIONS,BUREAUX DANS OU SUR DES DISPOSITIFS D\'ECLAIRAGE ET DE COMMAND,POUR DES TENSIONS JUSQU4A 750V', '2', '65beb6d13aa7e.jpg'),
-(32, 'bev_Biyemassi', 'H07VU15VIOLETC100', '0000', 'FILS', 'FILS ET CABLES', 'EUROPE', 'REXEL', 126, 180, 175, 0, 0, 0, 'm', 'CONDUCTEURS POUR EQUIPEMENTS DES INSTALLATIONS DOMESTIQUES FIXES ET PROTEGEES,LOCAUX D\'HABITATIONS,BUREAUX DANS OU SUR DES DISPOSITIFS D\'ECLAIRAGE ET DE COMMAND,POUR DES TENSIONS JUSQU4A 750V', '2', '65beb6d13aa7e.jpg'),
-(33, 'leti_nkolbisson', 'H07VU15VIOLETC100', '0000', 'FILS', 'FILS ET CABLES', 'EUROPE', 'REXEL', 126, 180, 175, 0, 0, 0, 'm', 'CONDUCTEURS POUR EQUIPEMENTS DES INSTALLATIONS DOMESTIQUES FIXES ET PROTEGEES,LOCAUX D\'HABITATIONS,BUREAUX DANS OU SUR DES DISPOSITIFS D\'ECLAIRAGE ET DE COMMAND,POUR DES TENSIONS JUSQU4A 750V', '2', '65beb6d13aa7e.jpg'),
-(34, 'bev_oyomabang', 'H07VU15ORANGEC100', '0000', 'FILS', 'FILS ET CABLES', 'EUROPE', 'REXEL', 126, 180, 175, 0, 0, 0, 'm', 'CONDUCTEURS POUR EQUIPEMENTS DES INSTALLATIONS DOMESTIQUES FIXES ET PROTEGEES,LOCAUX D\'HABITATIONS,BUREAUX DANS OU SUR DES DISPOSITIFS D\'ECLAIRAGE ET DE COMMAND,POUR DES TENSIONS JUSQU4A 750V', '2', '65beb76d1eb9d.jpg'),
-(35, 'bev_Biyemassi', 'H07VU15ORANGEC100', '0000', 'FILS', 'FILS ET CABLES', 'EUROPE', 'REXEL', 126, 180, 175, 0, 0, 0, 'm', 'CONDUCTEURS POUR EQUIPEMENTS DES INSTALLATIONS DOMESTIQUES FIXES ET PROTEGEES,LOCAUX D\'HABITATIONS,BUREAUX DANS OU SUR DES DISPOSITIFS D\'ECLAIRAGE ET DE COMMAND,POUR DES TENSIONS JUSQU4A 750V', '2', '65beb76d1eb9d.jpg'),
-(36, 'leti_nkolbisson', 'H07VU15ORANGEC100', '0000', 'FILS', 'FILS ET CABLES', 'EUROPE', 'REXEL', 126, 180, 175, 0, 0, 0, 'm', 'CONDUCTEURS POUR EQUIPEMENTS DES INSTALLATIONS DOMESTIQUES FIXES ET PROTEGEES,LOCAUX D\'HABITATIONS,BUREAUX DANS OU SUR DES DISPOSITIFS D\'ECLAIRAGE ET DE COMMAND,POUR DES TENSIONS JUSQU4A 750V', '2', '65beb76d1eb9d.jpg'),
-(37, 'bev_oyomabang', 'U1000R2V3G25C100', '0000', 'CABLES', 'FILS ET CABLES', 'EUROPE', 'REXEL', 740, 890, 880, 0, 0, 0, 'm', 'CABLES INDUSTRIELS\r\nBASSE TENSION - ÉNERGIE\r\nRIGIDE - CUIVRE\r\nU 1000 R2V\r\nNF C 32-321\r\nAME M!tal : Cuivre nu. Forme : ronde. Souplesse : S < 4 mm2 classe 1 - massif ; S > 6 mm2 classe 2 - c\"bl!. Temp!rature maximale # l\'\"me : 90$C en permanence. 250$C en court-circuit.\r\nISOLATION PRC. Rep!rage :\r\nREVÊTEMENT D’ASSEMBLAGE Gaine thermoplastique ou ruban synth!tique suivant section.\r\nGAINE EXTÉRIEURE PVC. Couleur : noire. Marquage : U 1000 R2V - Nb Cond. (X ou G) S en mm2\r\n- USE - N$ usine. X : c\"ble sans V / J (Ex : 2 X 1,5). G : c\"ble avec V / J (Ex : 4 G 2,5)\r\nUTILISATIONS Installations industrielles, colonnes montantes d\'immeubles. D!conseill! dans des terrains inond!s plus de deux mois par an et tranch!es formant drain. Enterr!, pr!voir une protection m!canique contre les chocs. Ne peut %tre utilis! sous contraintes m!caniques # temp!rature permanente au dessous de -10$C.\r\nPOSE : Rayon de courbure mini : 6 D. Temp!rature mini de pose : -10$C.\r\nCARACTÉRISTIQUES TECHNIQUES\r\nSection\r\nmm2', '3', '65bebc1d80e7c.jpg'),
-(38, 'bev_Biyemassi', 'U1000R2V3G25C100', '0000', 'CABLES', 'FILS ET CABLES', 'EUROPE', 'REXEL', 740, 890, 880, 0, 0, 0, 'm', 'CABLES INDUSTRIELS\r\nBASSE TENSION - ÉNERGIE\r\nRIGIDE - CUIVRE\r\nU 1000 R2V\r\nNF C 32-321\r\nAME M!tal : Cuivre nu. Forme : ronde. Souplesse : S < 4 mm2 classe 1 - massif ; S > 6 mm2 classe 2 - c\"bl!. Temp!rature maximale # l\'\"me : 90$C en permanence. 250$C en court-circuit.\r\nISOLATION PRC. Rep!rage :\r\nREVÊTEMENT D’ASSEMBLAGE Gaine thermoplastique ou ruban synth!tique suivant section.\r\nGAINE EXTÉRIEURE PVC. Couleur : noire. Marquage : U 1000 R2V - Nb Cond. (X ou G) S en mm2\r\n- USE - N$ usine. X : c\"ble sans V / J (Ex : 2 X 1,5). G : c\"ble avec V / J (Ex : 4 G 2,5)\r\nUTILISATIONS Installations industrielles, colonnes montantes d\'immeubles. D!conseill! dans des terrains inond!s plus de deux mois par an et tranch!es formant drain. Enterr!, pr!voir une protection m!canique contre les chocs. Ne peut %tre utilis! sous contraintes m!caniques # temp!rature permanente au dessous de -10$C.\r\nPOSE : Rayon de courbure mini : 6 D. Temp!rature mini de pose : -10$C.\r\nCARACTÉRISTIQUES TECHNIQUES\r\nSection\r\nmm2', '3', '65bebc1d80e7c.jpg'),
-(39, 'leti_nkolbisson', 'U1000R2V3G25C100', '0000', 'CABLES', 'FILS ET CABLES', 'EUROPE', 'REXEL', 740, 890, 880, 0, 0, 0, 'm', 'CABLES INDUSTRIELS\r\nBASSE TENSION - ÉNERGIE\r\nRIGIDE - CUIVRE\r\nU 1000 R2V\r\nNF C 32-321\r\nAME M!tal : Cuivre nu. Forme : ronde. Souplesse : S < 4 mm2 classe 1 - massif ; S > 6 mm2 classe 2 - c\"bl!. Temp!rature maximale # l\'\"me : 90$C en permanence. 250$C en court-circuit.\r\nISOLATION PRC. Rep!rage :\r\nREVÊTEMENT D’ASSEMBLAGE Gaine thermoplastique ou ruban synth!tique suivant section.\r\nGAINE EXTÉRIEURE PVC. Couleur : noire. Marquage : U 1000 R2V - Nb Cond. (X ou G) S en mm2\r\n- USE - N$ usine. X : c\"ble sans V / J (Ex : 2 X 1,5). G : c\"ble avec V / J (Ex : 4 G 2,5)\r\nUTILISATIONS Installations industrielles, colonnes montantes d\'immeubles. D!conseill! dans des terrains inond!s plus de deux mois par an et tranch!es formant drain. Enterr!, pr!voir une protection m!canique contre les chocs. Ne peut %tre utilis! sous contraintes m!caniques # temp!rature permanente au dessous de -10$C.\r\nPOSE : Rayon de courbure mini : 6 D. Temp!rature mini de pose : -10$C.\r\nCARACTÉRISTIQUES TECHNIQUES\r\nSection\r\nmm2', '3', '65bebc1d80e7c.jpg'),
-(40, 'bev_oyomabang', 'U1000R2V3G15C100', '0000', 'CABLE', 'FILS ET CABLES', 'EUROPE', 'REXEL', 630, 685, 680, 0, 0, 0, 'm', 'CABLES INDUSTRIELS\r\nBASSE TENSION - ÉNERGIE\r\nRIGIDE - CUIVRE\r\nU 1000 R2V\r\nNF C 32-321\r\nAME M!tal : Cuivre nu. Forme : ronde. Souplesse : S < 4 mm2 classe 1 - massif ; S > 6 mm2 classe 2 - c\"bl!. Temp!rature maximale # l\'\"me : 90$C en permanence. 250$C en court-circuit.\r\nISOLATION PRC. Rep!rage :\r\nREVÊTEMENT D’ASSEMBLAGE Gaine thermoplastique ou ruban synth!tique suivant section.\r\nGAINE EXTÉRIEURE PVC. Couleur : noire. Marquage : U 1000 R2V - Nb Cond. (X ou G) S en mm2\r\n- USE - N$ usine. X : c\"ble sans V / J (Ex : 2 X 1,5). G : c\"ble avec V / J (Ex : 4 G 2,5)\r\nUTILISATIONS Installations industrielles, colonnes montantes d\'immeubles. D!conseill! dans des terrains inond!s plus de deux mois par an et tranch!es formant drain. Enterr!, pr!voir une protection m!canique contre les chocs. Ne peut %tre utilis! sous contraintes m!caniques # temp!rature permanente au dessous de -10$C.\r\nPOSE : Rayon de courbure mini : 6 D. Temp!rature mini de pose : -10$C.\r\nCARACTÉRISTIQUES TECHNIQUES\r\nSection\r\nmm2', '4', '65bebdca4460b.jpg'),
-(41, 'bev_Biyemassi', 'U1000R2V3G15C100', '0000', 'CABLE', 'FILS ET CABLES', 'EUROPE', 'REXEL', 630, 685, 680, 0, 0, 0, 'm', 'CABLES INDUSTRIELS\r\nBASSE TENSION - ÉNERGIE\r\nRIGIDE - CUIVRE\r\nU 1000 R2V\r\nNF C 32-321\r\nAME M!tal : Cuivre nu. Forme : ronde. Souplesse : S < 4 mm2 classe 1 - massif ; S > 6 mm2 classe 2 - c\"bl!. Temp!rature maximale # l\'\"me : 90$C en permanence. 250$C en court-circuit.\r\nISOLATION PRC. Rep!rage :\r\nREVÊTEMENT D’ASSEMBLAGE Gaine thermoplastique ou ruban synth!tique suivant section.\r\nGAINE EXTÉRIEURE PVC. Couleur : noire. Marquage : U 1000 R2V - Nb Cond. (X ou G) S en mm2\r\n- USE - N$ usine. X : c\"ble sans V / J (Ex : 2 X 1,5). G : c\"ble avec V / J (Ex : 4 G 2,5)\r\nUTILISATIONS Installations industrielles, colonnes montantes d\'immeubles. D!conseill! dans des terrains inond!s plus de deux mois par an et tranch!es formant drain. Enterr!, pr!voir une protection m!canique contre les chocs. Ne peut %tre utilis! sous contraintes m!caniques # temp!rature permanente au dessous de -10$C.\r\nPOSE : Rayon de courbure mini : 6 D. Temp!rature mini de pose : -10$C.\r\nCARACTÉRISTIQUES TECHNIQUES\r\nSection\r\nmm2', '4', '65bebdca4460b.jpg'),
-(42, 'leti_nkolbisson', 'U1000R2V3G15C100', '0000', 'CABLE', 'FILS ET CABLES', 'EUROPE', 'REXEL', 630, 685, 680, 0, 0, 0, 'm', 'CABLES INDUSTRIELS\r\nBASSE TENSION - ÉNERGIE\r\nRIGIDE - CUIVRE\r\nU 1000 R2V\r\nNF C 32-321\r\nAME M!tal : Cuivre nu. Forme : ronde. Souplesse : S < 4 mm2 classe 1 - massif ; S > 6 mm2 classe 2 - c\"bl!. Temp!rature maximale # l\'\"me : 90$C en permanence. 250$C en court-circuit.\r\nISOLATION PRC. Rep!rage :\r\nREVÊTEMENT D’ASSEMBLAGE Gaine thermoplastique ou ruban synth!tique suivant section.\r\nGAINE EXTÉRIEURE PVC. Couleur : noire. Marquage : U 1000 R2V - Nb Cond. (X ou G) S en mm2\r\n- USE - N$ usine. X : c\"ble sans V / J (Ex : 2 X 1,5). G : c\"ble avec V / J (Ex : 4 G 2,5)\r\nUTILISATIONS Installations industrielles, colonnes montantes d\'immeubles. D!conseill! dans des terrains inond!s plus de deux mois par an et tranch!es formant drain. Enterr!, pr!voir une protection m!canique contre les chocs. Ne peut %tre utilis! sous contraintes m!caniques # temp!rature permanente au dessous de -10$C.\r\nPOSE : Rayon de courbure mini : 6 D. Temp!rature mini de pose : -10$C.\r\nCARACTÉRISTIQUES TECHNIQUES\r\nSection\r\nmm2', '4', '65bebdca4460b.jpg'),
-(43, 'bev_oyomabang', 'CAT64PF/UTPC100', '0000', 'CABLE RJ45', 'FILS ET CABLES', 'EUROPE', 'REXEL', 525, 600, 598, 0, 0, 0, 'm', 'REF : CX6-xSH\r\nEd. 2\r\nTM 08/11\r\nCable 100 ? F/UTP x paires catégorie 6 – 350 MHz\r\nLow Smoke Zero Halogen\r\nwww.cae-groupe.fr\r\nCe document est confidentiel, et est la propriété de CAE Groupe. CAE Groupe possède un copyright, et le\r\ndocument ne doit pas être copié ou changé sous aucune forme, complètement ou en partie sans permission\r\nécrite de CAE Groupe. Les caractéristiques portées sur cette fiche ne sont pas contractuelles, et sont\r\nsusceptibles d’être modifiées sans préavis.\r\nINFORMATIONS PRODUIT\r\nApplication\r\nCe Câble écranté F/UTP (Foiled twisted pairs) qui s’utilise dans une configuration horizontale ou verticale (Rocade), il\r\nconstitue la base d’un réseau V.D.I (Voix-Donnée-Image) à très haut-débit.\r\nSon Blindage avec un fort coefficient de recouvrement lui permet une utilisation en environnement perturbé et lui assure un\r\nbon fonctionnement jusqu’à 350 Mhz. Sa structure interne lui assure des marges importantes avec l’ensemble des\r\nstandards actuels.\r\nCe câble est utilisé dans l', '5', '65bec1426a054.jpg'),
-(44, 'bev_Biyemassi', 'CAT64PF/UTPC100', '0000', 'CABLE RJ45', 'FILS ET CABLES', 'EUROPE', 'REXEL', 525, 600, 598, 0, 0, 0, 'm', 'REF : CX6-xSH\r\nEd. 2\r\nTM 08/11\r\nCable 100 ? F/UTP x paires catégorie 6 – 350 MHz\r\nLow Smoke Zero Halogen\r\nwww.cae-groupe.fr\r\nCe document est confidentiel, et est la propriété de CAE Groupe. CAE Groupe possède un copyright, et le\r\ndocument ne doit pas être copié ou changé sous aucune forme, complètement ou en partie sans permission\r\nécrite de CAE Groupe. Les caractéristiques portées sur cette fiche ne sont pas contractuelles, et sont\r\nsusceptibles d’être modifiées sans préavis.\r\nINFORMATIONS PRODUIT\r\nApplication\r\nCe Câble écranté F/UTP (Foiled twisted pairs) qui s’utilise dans une configuration horizontale ou verticale (Rocade), il\r\nconstitue la base d’un réseau V.D.I (Voix-Donnée-Image) à très haut-débit.\r\nSon Blindage avec un fort coefficient de recouvrement lui permet une utilisation en environnement perturbé et lui assure un\r\nbon fonctionnement jusqu’à 350 Mhz. Sa structure interne lui assure des marges importantes avec l’ensemble des\r\nstandards actuels.\r\nCe câble est utilisé dans l', '5', '65bec1426a054.jpg'),
-(45, 'leti_nkolbisson', 'CAT64PF/UTPC100', '0000', 'CABLE RJ45', 'FILS ET CABLES', 'EUROPE', 'REXEL', 525, 600, 598, 0, 0, 0, 'm', 'REF : CX6-xSH\r\nEd. 2\r\nTM 08/11\r\nCable 100 ? F/UTP x paires catégorie 6 – 350 MHz\r\nLow Smoke Zero Halogen\r\nwww.cae-groupe.fr\r\nCe document est confidentiel, et est la propriété de CAE Groupe. CAE Groupe possède un copyright, et le\r\ndocument ne doit pas être copié ou changé sous aucune forme, complètement ou en partie sans permission\r\nécrite de CAE Groupe. Les caractéristiques portées sur cette fiche ne sont pas contractuelles, et sont\r\nsusceptibles d’être modifiées sans préavis.\r\nINFORMATIONS PRODUIT\r\nApplication\r\nCe Câble écranté F/UTP (Foiled twisted pairs) qui s’utilise dans une configuration horizontale ou verticale (Rocade), il\r\nconstitue la base d’un réseau V.D.I (Voix-Donnée-Image) à très haut-débit.\r\nSon Blindage avec un fort coefficient de recouvrement lui permet une utilisation en environnement perturbé et lui assure un\r\nbon fonctionnement jusqu’à 350 Mhz. Sa structure interne lui assure des marges importantes avec l’ensemble des\r\nstandards actuels.\r\nCe câble est utilisé dans l', '5', '65bec1426a054.jpg'),
-(46, 'bev_oyomabang', '\0CABLECOAXIAL17VATCC1', '0000', 'CABLE VATC  TV', 'FILS ET CABLES', 'EUROPE', 'REXEL', 90, 115, 112, 0, 0, 0, 'm', 'CABLE TV', '6', '65bec5315fdb6.jpg'),
-(47, 'bev_Biyemassi', '\0CABLECOAXIAL17VATCC1', '0000', 'CABLE VATC  TV', 'FILS ET CABLES', 'EUROPE', 'REXEL', 90, 115, 112, 0, 0, 0, 'm', 'CABLE TV', '6', '65bec5315fdb6.jpg'),
-(48, 'leti_nkolbisson', '\0CABLECOAXIAL17VATCC1', '0000', 'CABLE VATC  TV', 'FILS ET CABLES', 'EUROPE', 'REXEL', 90, 115, 112, 0, 0, 0, 'm', 'CABLE TV', '6', '65bec5315fdb6.jpg'),
-(49, 'bev_oyomabang', 'CABLECUIVRENU25Â²T500', '0000', 'CUIVRE NU', 'FILS ET CABLES', 'EUROPE', 'REXEL', 300, 380, 360, 0, 0, 0, 'm', 'CABLE CUIVRE NU', '7', '65bec6d13a6f1.jpg'),
-(50, 'bev_Biyemassi', 'CABLECUIVRENU25Â²T500', '0000', 'CUIVRE NU', 'FILS ET CABLES', 'EUROPE', 'REXEL', 300, 380, 360, 0, 0, 0, 'm', 'CABLE CUIVRE NU', '7', '65bec6d13a6f1.jpg'),
-(51, 'leti_nkolbisson', 'CABLECUIVRENU25Â²T500', '0000', 'CUIVRE NU', 'FILS ET CABLES', 'EUROPE', 'REXEL', 300, 380, 360, 0, 0, 0, 'm', 'CABLE CUIVRE NU', '7', '65bec6d13a6f1.jpg'),
-(52, 'bev_oyomabang', '\0CABLEVR35Â²ROUGET500', '0000', 'CABLE ALIMENTATION', 'FILS ET CABLES', 'EUROPE', 'REXEL', 675, 700, 695, 0, 0, 0, 'm', 'CABLE ALIMENTION ', '8', '65beca39c061f.jpg'),
-(53, 'bev_Biyemassi', '\0CABLEVR35Â²ROUGET500', '0000', 'CABLE ALIMENTATION', 'FILS ET CABLES', 'EUROPE', 'REXEL', 675, 700, 695, 0, 0, 0, 'm', 'CABLE ALIMENTION ', '8', '65beca39c061f.jpg'),
-(54, 'leti_nkolbisson', '\0CABLEVR35Â²ROUGET500', '0000', 'CABLE ALIMENTATION', 'FILS ET CABLES', 'EUROPE', 'REXEL', 675, 700, 695, 0, 0, 0, 'm', 'CABLE ALIMENTION ', '8', '65beca39c061f.jpg'),
-(55, 'bev_oyomabang', 'CABLEVR35Â²BLEUT500', '0000', 'CABLE ALIMENTATION ALU', 'FILS ET CABLES', 'EUROPE', 'REXEL', 475, 550, 540, 0, 0, 0, 'm', 'CABLE ALIMENTATION', '8', '65becaed3a331.jpg'),
-(56, 'bev_Biyemassi', 'CABLEVR35Â²BLEUT500', '0000', 'CABLE ALIMENTATION ALU', 'FILS ET CABLES', 'EUROPE', 'REXEL', 475, 550, 540, 0, 0, 0, 'm', 'CABLE ALIMENTATION', '8', '65becaed3a331.jpg'),
-(57, 'leti_nkolbisson', 'CABLEVR35Â²BLEUT500', '0000', 'CABLE ALIMENTATION ALU', 'FILS ET CABLES', 'EUROPE', 'REXEL', 475, 550, 540, 0, 0, 0, 'm', 'CABLE ALIMENTATION', '8', '65becaed3a331.jpg'),
-(58, 'bev_oyomabang', 'ICTA32AF', 'ICTA32AF', 'GAINE ICTA32', 'CONDUITS,CANALISATIONS', 'COURANT', 'SDME', 550, 750, 745, 745, 0, 0, 'm', 'GAINE ICTA 32', '2', '65edc50d7842f.jpg'),
-(59, 'bev_Biyemassi', 'ICTA32AF', 'ICTA32AF', 'GAINE ICTA32', 'CONDUITS,CANALISATIONS', 'COURANT', 'SDME', 550, 750, 745, 745, 0, 0, 'm', 'GAINE ICTA 32', '2', '65edc50d7842f.jpg'),
-(60, 'leti_nkolbisson', 'ICTA32AF', 'ICTA32AF', 'GAINE ICTA32', 'CONDUITS,CANALISATIONS', 'COURANT', 'SDME', 550, 750, 745, 745, 0, 0, 'm', 'GAINE ICTA 32', '2', '65edc50d7842f.jpg'),
-(61, 'bev_oyomabang', 'HHKKK/001', 'dkdkdkdkd', 'ZOOOOOOOOOOOO237O', 'Accessoires et autre appareillage terminal', 'jjjej', 'OKOK chaud Manioc', 500, 1000, 900, 0, 0, 5, 'Kg', 'ndndndnd', 'D55', '660becc3e7ebc.jpg'),
-(62, 'bev_Biyemassi', 'HHKKK/001', 'dkdkdkdkd', 'ZOOOOOOOOOOOO237O', 'Accessoires et autre appareillage terminal', 'jjjej', 'OKOK chaud Manioc', 500, 1000, 900, 0, 0, 5, 'Kg', 'ndndndnd', 'D55', '660becc3e7ebc.jpg'),
-(63, 'leti_nkolbisson', 'HHKKK/001', 'dkdkdkdkd', 'ZOOOOOOOOOOOO237O', 'Accessoires et autre appareillage terminal', 'jjjej', 'OKOK chaud Manioc', 500, 1000, 900, 0, 0, 5, 'Kg', 'ndndndnd', 'D55', '660becc3e7ebc.jpg'),
-(64, 'bev_oyomabang', '000022222', '2222222', 'Patapouf', '', 'polo', 'OKOK chaud Manioc', 150, 500, 250, 0, 0, 0, 'U', 'skdkdk', '44444', '66866aad0ca82.png'),
-(65, 'bev_Biyemassi', '000022222', '2222222', 'Patapouf', '', 'polo', 'OKOK chaud Manioc', 150, 500, 250, 0, 0, 0, 'U', 'skdkdk', '44444', '66866aad0ca82.png'),
-(66, 'leti_nkolbisson', '000022222', '2222222', 'Patapouf', '', 'polo', 'OKOK chaud Manioc', 150, 500, 250, 0, 0, 0, 'U', 'skdkdk', '44444', '66866aad0ca82.png'),
-(67, 'bev_oyomabang', '44545455', '45545454', 'Lampe', 'Luminaires', 'jkjk', 'OKOK chaud Manioc', 200, 500, 300, 0, 0, 0, 'U', 'kdkdk', 'klllkkl', '66866b1bdfb0d.png'),
-(68, 'bev_Biyemassi', '44545455', '45545454', 'Lampe', 'Luminaires', 'jkjk', 'OKOK chaud Manioc', 200, 500, 300, 0, 0, 0, 'U', 'kdkdk', 'klllkkl', '66866b1bdfb0d.png'),
-(69, 'leti_nkolbisson', '44545455', '45545454', 'Lampe', 'Luminaires', 'jkjk', 'OKOK chaud Manioc', 200, 500, 300, 0, 0, 0, 'U', 'kdkdk', 'klllkkl', '66866b1bdfb0d.png'),
-(70, 'bev_oyomabang', '555555', '6666666', 'Ampoule', '', 'Zoook', 'OKOK chaud Manioc', 200, 500, 300, 0, 0, 0, 'U', 'Pouozzo', 'papapap', '66866f065391c.png'),
-(71, 'bev_Biyemassi', '555555', '6666666', 'Ampoule', '', 'Zoook', 'OKOK chaud Manioc', 200, 500, 300, 0, 0, 0, 'U', 'Pouozzo', 'papapap', '66866f065391c.png'),
-(72, 'leti_nkolbisson', '555555', '6666666', 'Ampoule', '', 'Zoook', 'OKOK chaud Manioc', 200, 500, 300, 0, 0, 0, 'U', 'Pouozzo', 'papapap', '66866f065391c.png'),
-(73, 'bev_oyomabang', '56666', '66666', 'Ampoule Bouillie', 'Luminaires', 'JDJDJJ', 'OKOK chaud Manioc', 200, 500, 300, 0, 13, 5, 'U', 'NNNCNC', 'JSJSJ', '669ed3f307250.jpg'),
-(74, 'bev_Biyemassi', '56666', '66666', 'Ampoule Bouillie', 'Luminaires', 'JDJDJJ', 'OKOK chaud Manioc', 200, 500, 300, 0, 0, 5, 'U', 'NNNCNC', 'JSJSJ', '669ed3f307250.jpg'),
-(75, 'leti_nkolbisson', '56666', '66666', 'Ampoule Bouillie', 'Luminaires', 'JDJDJJ', 'OKOK chaud Manioc', 200, 500, 300, 0, 0, 5, 'U', 'NNNCNC', 'JSJSJ', '669ed3f307250.jpg'),
-(76, 'bev_oyomabang', '85858585', '5858585', 'AA Ampoule', 'Accessoires et autre appareillage terminal', 'Zu', 'OKOK chaud Manioc', 200, 600, 400, 0, 0, 0, 'Kg', 'hddhdh', 'gfrfrfrfr', '668674409c43d.png'),
-(77, 'bev_Biyemassi', '85858585', '5858585', 'AA Ampoule', 'Accessoires et autre appareillage terminal', 'Zu', 'OKOK chaud Manioc', 200, 600, 400, 0, 0, 0, 'Kg', 'hddhdh', 'gfrfrfrfr', '668674409c43d.png'),
-(78, 'leti_nkolbisson', '85858585', '5858585', 'AA Ampoule', 'Accessoires et autre appareillage terminal', 'Zu', 'OKOK chaud Manioc', 200, 600, 400, 0, 0, 0, 'Kg', 'hddhdh', 'gfrfrfrfr', '668674409c43d.png'),
-(79, 'bev_oyomabang', '5858585', '8585858', 'ZOOM LAMPE', 'Lampes ZOOM', 'dededed', 'OKOK chaud Manioc', 200, 800, 400, 0, 0, 0, 'U', 'dhdddh', 'dededed', '668674b756885.png'),
-(80, 'bev_Biyemassi', '5858585', '8585858', 'ZOOM LAMPE', 'Lampes ZOOM', 'dededed', 'OKOK chaud Manioc', 200, 800, 400, 0, 0, 0, 'U', 'dhdddh', 'dededed', '668674b756885.png'),
-(81, 'leti_nkolbisson', '5858585', '8585858', 'ZOOM LAMPE', 'Lampes ZOOM', 'dededed', 'OKOK chaud Manioc', 200, 800, 400, 0, 0, 0, 'U', 'dhdddh', 'dededed', '668674b756885.png'),
-(82, 'bev_oyomabang', '0000071', '0000071', 'LE BOBOLO', 'Accessoires et autre appareillage terminal', 'MOATE', 'MOATE', 100, 200, 150, 0, 0, 0, 'U', 'BOBOLO', 'RAS', '66a15f7c756bc.jpg'),
-(83, 'bev_Biyemassi', '0000071', '0000071', 'LE BOBOLO', 'Accessoires et autre appareillage terminal', 'MOATE', 'MOATE', 100, 200, 150, 0, 0, 0, 'U', 'BOBOLO', 'RAS', '66a15f7c756bc.jpg'),
-(84, 'leti_nkolbisson', '0000071', '0000071', 'LE BOBOLO', 'Accessoires et autre appareillage terminal', 'MOATE', 'MOATE', 100, 200, 150, 0, 0, 0, 'U', 'BOBOLO', 'RAS', '66a15f7c756bc.jpg'),
-(85, 'bev_oyomabang', '000072', '000072', 'Namwondo', 'Accessoires et autre appareillage terminal', 'MOATE-NAM', 'MOATE-NAM', 100, 200, 150, 0, 0, 0, 'U', 'Namwondo', 'RAS', '66a160b921832.jpg'),
-(86, 'bev_Biyemassi', '000072', '000072', 'Namwondo', 'Accessoires et autre appareillage terminal', 'MOATE-NAM', 'MOATE-NAM', 100, 200, 150, 0, 0, 0, 'U', 'Namwondo', 'RAS', '66a160b921832.jpg'),
-(87, 'leti_nkolbisson', '000072', '000072', 'Namwondo', 'Accessoires et autre appareillage terminal', 'MOATE-NAM', 'MOATE-NAM', 100, 200, 150, 0, 0, 0, 'U', 'Namwondo', 'RAS', '66a160b921832.jpg'),
-(88, 'bev_oyomabang', 'CA000233', '002CA000233', 'ZOBAZO', 'Accessoires et autre appareillage terminal', 'oko', 'OKOK chaud Manioc', 2500, 5000, 4000, 0, 45, 0, 'U', 'CA000233CA000233CA000233', 'RAS', '691ea6088d957.jpg'),
-(89, 'bev_Biyemassi', 'CA000233', '002CA000233', 'ZOBAZO', 'Accessoires et autre appareillage terminal', 'oko', 'OKOK chaud Manioc', 2500, 5000, 4000, 0, 0, 0, 'U', 'CA000233CA000233CA000233', 'RAS', '691ea6088d957.jpg'),
-(90, 'leti_nkolbisson', 'CA000233', '002CA000233', 'ZOBAZO', 'Accessoires et autre appareillage terminal', 'oko', 'OKOK chaud Manioc', 2500, 5000, 4000, 0, 0, 0, 'U', 'CA000233CA000233CA000233', 'RAS', '691ea6088d957.jpg'),
 (91, 'Eleveur', 'CA000233', '002CA000233', 'ZOBAZO', 'Accessoires et autre appareillage terminal', 'oko', 'OKOK chaud Manioc', 2500, 5000, 4000, 0, 120, 0, 'U', 'CA000233CA000233CA000233', 'RAS', '691ea6088d957.jpg');
 
 -- --------------------------------------------------------
@@ -1316,13 +1076,7 @@ CREATE TABLE IF NOT EXISTS `tbl_user` (
 --
 
 INSERT INTO `tbl_user` (`user_id`, `username`, `fullname`, `password`, `magasin`, `role`, `is_active`) VALUES
-(6, 'tnh', 'Tognia', '7c222fb2927d828af22f592134e8932480637c0d', 'bev_oyomabang', 'Admin', 1),
-(7, 'operator1', 'KEBO KAKI', '7c222fb2927d828af22f592134e8932480637c0d', 'bev_oyomabang', 'Operator', 1),
-(8, 'good', 'GOAOAOAO JZJZJZHJ', '7c222fb2927d828af22f592134e8932480637c0d', 'bev_oyomabang', 'Admin', 1),
-(9, 'respo', 'NVBZ', '7c222fb2927d828af22f592134e8932480637c0d', 'bev_oyomabang', 'Responsable', 1),
-(12, 'laeticia', 'YAKAM Laeticia', '7c222fb2927d828af22f592134e8932480637c0d', 'bev_oyomabang', 'Admin', 1),
-(13, 'amelia', 'yakam', '7c222fb2927d828af22f592134e8932480637c0d', 'bev_oyomabang', 'Responsable', 1),
-(15, 'OnceAgain', 'OBOBOGO', '7c222fb2927d828af22f592134e8932480637c0d', 'Eleveur', 'Responsable', 1),
+(6, 'tnh', 'Tognia', '7c222fb2927d828af22f592134e8932480637c0d', 'Eleveur', 'Admin', 1),
 (17, 'storekeeper', 'PEACEFULL', '7c4a8d09ca3762af61e59520943dc26494f8941b', 'Eleveur', 'storekeeper', 1),
 (18, 'operator2', 'OKO', '7c222fb2927d828af22f592134e8932480637c0d', 'Eleveur', 'Operator', 1);
 
@@ -1388,11 +1142,6 @@ CREATE TABLE IF NOT EXISTS `users` (
 --
 
 INSERT INTO `users` (`user_id`, `firstname`, `middlename`, `lastname`, `address`, `email`, `contact`, `username`, `password`, `type`) VALUES
-(10, 'HENRI', 'TNH', 'TOGNIA', 'NGOUSSO Fabrique', 'nubizunltd@gmail.com', 'TNH', 'tnh', 'a1Bz20ydqelm8m1wql25d55ad283aa400af464c76d713c07ad', ''),
-(11, 'PEACE', 'BE', 'STILL', 'OMNISPORT', 'tognia@gmail.com', '672569213', 'okok', '7c222fb2927d828af22f592134e8932480637c0d', 'particulier'),
-(12, 'FRANCIS', 'DUJARDIN', 'SECEC', 'RUE 78', 'trajectoirei@live.fr', '677777777', 'topsi', 'f7c3bc1d808e04732adf679965ccc34ca7ae3441', 'entreprise'),
-(13, 'zfzfzfzfzf', 'fzfzfzfzfz', 'zfzfzfzfzfzf', 'NGOUSSO Fabrique', 'trajectoirei@live.fr', '69999999', 'lepile', '7c222fb2927d828af22f592134e8932480637c0d', 'particulier'),
-(14, 'MOISE', ' ', 'NGNOKAM', 'Ngousso Fabrique', 'ngnokamoise@yahoo.fr', '699878271', 'nmoise', '7c222fb2927d828af22f592134e8932480637c0d', 'particulier'),
 (15, 'BOBIBO', 'BOBIBO', 'BOBIBO', 'BOBIBO', 'awarenessera40@gmail.com', '000065', 'htognia', '7c222fb2927d828af22f592134e8932480637c0d', 'particulier');
 
 --

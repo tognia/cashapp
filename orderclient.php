@@ -1,6 +1,5 @@
 <?php
 include_once 'db/connect_db.php';
-session_start();
 if ($_SESSION['role'] == "Admin") {
     include_once 'inc/header_all.php';
 } else if ($_SESSION['role'] == "Operator") {
