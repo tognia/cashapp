@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Hôte : 127.0.0.1:3306
--- Généré le :  mer. 26 nov. 2025 à 16:36
+-- Généré le :  jeu. 27 nov. 2025 à 08:39
 -- Version du serveur :  5.7.26
 -- Version de PHP :  7.2.18
 
@@ -942,14 +942,8 @@ CREATE TABLE IF NOT EXISTS `tbl_product_shipment` (
 --
 
 INSERT INTO `tbl_product_shipment` (`shipment_id`, `shipment_date`, `product_id`, `shipped_quantity`, `code_agence`, `user_id`, `delivery_status`, `notes`) VALUES
-(1, '2025-11-25', 91, 30, '', '17', 'Delivered', 'Delivered'),
-(2, '2025-11-25', 91, 20, '', '17', 'Delivered', ''),
-(3, '2025-11-25', 91, 15, '', '17', 'Delivered', ''),
-(4, '2025-11-25', 91, 15, '0', '17', 'Delivered', ''),
-(5, '2025-11-25', 91, 10, 'Eleveur', '17', 'Delivered', ''),
-(6, '2025-11-25', 91, 10, '0', '17', 'Delivered', ''),
-(7, '2025-11-26', 91, 9, '0', '17', 'Delivered', ''),
-(8, '2025-11-26', 91, 1, '0', '17', 'Delivered', ''),
+(7, '2025-11-26', 91, 9, 'Eleveur', '17', 'Delivered', ''),
+(8, '2025-11-26', 91, 1, 'Eleveur', '17', 'Delivered', ''),
 (9, '2025-11-26', 91, 10, 'Eleveur', 'storekeeper', 'Delivered', '');
 
 -- --------------------------------------------------------
@@ -1027,7 +1021,7 @@ CREATE TABLE IF NOT EXISTS `tbl_shop_item` (
 --
 
 INSERT INTO `tbl_shop_item` (`product_id`, `shop_code`, `product_code`, `product_sku`, `product_name`, `product_category`, `product_brand`, `supplier`, `purchase_price`, `sell_price`, `min_price`, `discount`, `stock`, `min_stock`, `product_satuan`, `description`, `place_in_store`, `img`) VALUES
-(91, 'Eleveur', 'CA000233', '002CA000233', 'ZOBAZO', 'Accessoires et autre appareillage terminal', 'oko', 'OKOK chaud Manioc', 2500, 5000, 4000, 0, 120, 0, 'U', 'CA000233CA000233CA000233', 'RAS', '691ea6088d957.jpg');
+(91, 'Eleveur', 'CA000233', '002CA000233', 'ZOBAZO', 'Accessoires et autre appareillage terminal', 'oko', 'OKOK chaud Manioc', 2500, 5000, 4000, 0, 0, 0, 'U', 'CA000233CA000233CA000233', 'RAS', '691ea6088d957.jpg');
 
 -- --------------------------------------------------------
 
@@ -1069,7 +1063,7 @@ CREATE TABLE IF NOT EXISTS `tbl_user` (
   `role` varchar(15) NOT NULL,
   `is_active` tinyint(4) NOT NULL,
   PRIMARY KEY (`user_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=19 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=20 DEFAULT CHARSET=latin1;
 
 --
 -- Déchargement des données de la table `tbl_user`
@@ -1078,7 +1072,8 @@ CREATE TABLE IF NOT EXISTS `tbl_user` (
 INSERT INTO `tbl_user` (`user_id`, `username`, `fullname`, `password`, `magasin`, `role`, `is_active`) VALUES
 (6, 'tnh', 'Tognia', '7c222fb2927d828af22f592134e8932480637c0d', 'Eleveur', 'Admin', 1),
 (17, 'storekeeper', 'PEACEFULL', '7c4a8d09ca3762af61e59520943dc26494f8941b', 'Eleveur', 'storekeeper', 1),
-(18, 'operator2', 'OKO', '7c222fb2927d828af22f592134e8932480637c0d', 'Eleveur', 'Operator', 1);
+(18, 'operator2', 'OKO', '7c222fb2927d828af22f592134e8932480637c0d', 'Eleveur', 'Operator', 1),
+(19, 'respo', 'OBOBOGO', '7c4a8d09ca3762af61e59520943dc26494f8941b', 'Eleveur', 'Responsable', 1);
 
 -- --------------------------------------------------------
 

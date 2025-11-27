@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html>
+
 <head>
   <meta charset="utf-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -35,7 +36,7 @@
 
   <!-- Google Font -->
   <link rel="stylesheet"
-        href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,600,700,300italic,400italic,600italic">
+    href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,600,700,300italic,400italic,600italic">
 
   <!-- DataTables -->
   <link rel="stylesheet" href="bower_components/datatables.net-bs/css/dataTables.bootstrap.min.css">
@@ -103,8 +104,8 @@
                   </div>
                   <div class="pull-right">
                     <a href="misc/logout.php" class="btn btn-default btn-flat"
-                    onclick="return confirm('Confirmer ?')"
-                    class="btn btn-danger">Sign out</a>
+                      onclick="return confirm('Confirmer ?')"
+                      class="btn btn-danger">Sign out</a>
                   </div>
                 </li>
               </ul>
@@ -113,85 +114,94 @@
           </ul>
         </div>
       </nav>
-  <style>
-    body{
-        font-family: Arail, sans-serif;
-    }
-    /* Formatting search box */
-    .search-box{
-        width: 300px;
-        position: relative;
-        display: inline-block;
-        font-size: 14px;
-        margin-left: auto;
-        margin-right: auto; 
-        vertical-align: center;
-        
-    }
-    .search-box input[type="text"]{
-        height: 32px;
-        padding: 5px 10px;
-        border: 1px solid #92D7E5;
-        font-size: 14px;
-        margin-left: auto;
-        margin-right: auto; 
-        vertical-align: center;
-    }
-    .result{
-        position: absolute;        
-        z-index: 1000;
-        top: 100%;
-        left: 50px;
-        margin-left: auto;
-        margin-right: auto; 
-    }
-    .search-box input[type="text"], .result{
-        width: 100%;
-        box-sizing: border-box;
-        color: blue;
-        margin-left: auto;
-        margin-right: auto; 
-    }
-    /* Formatting result items */
-    .result p{
-        margin: 0;
-        padding: 7px 10px;
-        border: 2px solid #92D7E5;
-        border-top: none;
-        cursor: pointer;
-        margin-left: auto;
-        margin-right: auto; 
-    }
-    .result p:hover{
-        background: #f2f2f2;
-        margin-left: auto;
-        margin-right: auto; 
-    }
-</style>
+      <style>
+        body {
+          font-family: Arail, sans-serif;
+        }
 
-    <script>
-$(document).ready(function(){
-    $('.search-box input[type="text"]').on("keyup input", function(){
-        /* Get input value on change */
-        var inputVal = $(this).val();
-        var resultDropdown = $(this).siblings(".result");
-        if(inputVal.length){
-            $.get("backend-search.php", {term: inputVal}).done(function(data){
+        /* Formatting search box */
+        .search-box {
+          width: 300px;
+          position: relative;
+          display: inline-block;
+          font-size: 14px;
+          margin-left: auto;
+          margin-right: auto;
+          vertical-align: center;
+
+        }
+
+        .search-box input[type="text"] {
+          height: 32px;
+          padding: 5px 10px;
+          border: 1px solid #92D7E5;
+          font-size: 14px;
+          margin-left: auto;
+          margin-right: auto;
+          vertical-align: center;
+        }
+
+        .result {
+          position: absolute;
+          z-index: 1000;
+          top: 100%;
+          left: 50px;
+          margin-left: auto;
+          margin-right: auto;
+        }
+
+        .search-box input[type="text"],
+        .result {
+          width: 100%;
+          box-sizing: border-box;
+          color: blue;
+          margin-left: auto;
+          margin-right: auto;
+        }
+
+        /* Formatting result items */
+        .result p {
+          margin: 0;
+          padding: 7px 10px;
+          border: 2px solid #92D7E5;
+          border-top: none;
+          cursor: pointer;
+          margin-left: auto;
+          margin-right: auto;
+        }
+
+        .result p:hover {
+          background: #f2f2f2;
+          margin-left: auto;
+          margin-right: auto;
+        }
+      </style>
+
+      <script>
+        $(document).ready(function() {
+          $('.search-box input[type="text"]').on("keyup input", function() {
+            /* Get input value on change */
+            var inputVal = $(this).val();
+            var resultDropdown = $(this).siblings(".result");
+            if (inputVal.length) {
+              $.get("backend-search.php", {
+                term: inputVal
+              }).done(function(data) {
                 // Display the returned data in browser
                 resultDropdown.html(data);
-            });
-        } else{
-            resultDropdown.empty();
-        }
-    });
-    
-    // Set search input value on click of result item
-    $(document).on("click", ".result p", function(){
-        $(this).parents(".search-box").find('input[type="text"]').val($(this).text());
-        $(this).parent(".result").empty();
-    });
-});
-</script>
+              });
+            } else {
+              resultDropdown.empty();
+            }
+          });
+
+          // Set search input value on click of result item
+          $(document).on("click", ".result p", function() {
+            $(this).parents(".search-box").find('input[type="text"]').val($(this).text());
+            $(this).parent(".result").empty();
+          });
+        });
+      </script>
 
 
     </header>
@@ -206,36 +216,39 @@ $(document).ready(function(){
           <!--<li class="header">Menu</li>-->
           <li><a href="dashboard.php"><i class="fa fa-dashboard"></i> <span>Accueil</span></a></li>
           <li><a href="./order.php"><i class="fa fa-shopping-cart"></i> <span>Operations Caisse</span></a></li>
-          <?php if($_SESSION["role"]=="Admin"){ ?>
-          <li><a href="./orderclient.php"><i class="fa fa-shopping-cart"></i> <span>Commandes Clients</span></a></li>
-        <?php } ?>
+          <?php if ($_SESSION["role"] == "Admin") { ?>
+            <li><a href="./orderclient.php"><i class="fa fa-shopping-cart"></i> <span>Commandes Clients</span></a></li>
+          <?php } ?>
           <li><a href="report_sales.php"><i class="fa fa-newspaper-o"></i> <span>Stats</span></a></li>
           <li><a href="./product_shop_item.php"><i class="fa fa-archive"></i> <span>Produits En Boutique</span></a></li>
+          <li><a href="./edit_stock_shop_validation.php"><i class="fa fa-archive"></i> <span>Validation Produits Boutique</span></a></li>
 
-        <?php //if($_SESSION["role"]=="Admin"){ ?>
-          
+          <?php //if($_SESSION["role"]=="Admin"){ 
+          ?>
+
           <li><a href="./product.php"><i class="fa fa-archive"></i> <span>Produits</span></a></li>
           <li><a href="./satuan.php"><i class="fa fa-balance-scale"></i> <span>Unité de Produit</span></a></li>
-        <?php //} ?>
+          <?php //} 
+          ?>
           <li><a href="./category.php"><i class="fa fa-list-alt"></i> <span>Catégorie Produit</span></a></li>
-          
+
           <!--<li><a href="./edit_stock_shop.php"><i class="fa fa-archive"></i> <span>Ajout Stock Produit</span></a></li>-->
-          
+
           <li><a href="./customer.php"><i class="fa fa-users"></i> <span>Clients</span></a></li>
 
-          <?php if($_SESSION["role"]=="Admin"){ ?>
-          <li><a href="./supplier.php"><i class="fa fa-users"></i> <span>Fournisseurs</span></a></li>
+          <?php if ($_SESSION["role"] == "Admin") { ?>
+            <li><a href="./supplier.php"><i class="fa fa-users"></i> <span>Fournisseurs</span></a></li>
 
-          <li><a href="./register.php"><i class="fa fa-users"></i> <span>Utilisateurs</span></a></li>
+            <li><a href="./register.php"><i class="fa fa-users"></i> <span>Utilisateurs</span></a></li>
 
-          <li><a href="./agence.php"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-shop" viewBox="0 0 16 16">
-  <path d="M2.97 1.35A1 1 0 0 1 3.73 1h8.54a1 1 0 0 1 .76.35l2.609 3.044A1.5 1.5 0 0 1 16 5.37v.255a2.375 2.375 0 0 1-4.25 1.458A2.371 2.371 0 0 1 9.875 8 2.37 2.37 0 0 1 8 7.083 2.37 2.37 0 0 1 6.125 8a2.37 2.37 0 0 1-1.875-.917A2.375 2.375 0 0 1 0 5.625V5.37a1.5 1.5 0 0 1 .361-.976l2.61-3.045zm1.78 4.275a1.375 1.375 0 0 0 2.75 0 .5.5 0 0 1 1 0 1.375 1.375 0 0 0 2.75 0 .5.5 0 0 1 1 0 1.375 1.375 0 1 0 2.75 0V5.37a.5.5 0 0 0-.12-.325L12.27 2H3.73L1.12 5.045A.5.5 0 0 0 1 5.37v.255a1.375 1.375 0 0 0 2.75 0 .5.5 0 0 1 1 0zM1.5 8.5A.5.5 0 0 1 2 9v6h1v-5a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1v5h6V9a.5.5 0 0 1 1 0v6h.5a.5.5 0 0 1 0 1H.5a.5.5 0 0 1 0-1H1V9a.5.5 0 0 1 .5-.5zM4 15h3v-5H4v5zm5-5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1v-3zm3 0h-2v3h2v-3z"/>
-</svg> <span>Boutique</span></a></li>
-          
+            <li><a href="./agence.php"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-shop" viewBox="0 0 16 16">
+                  <path d="M2.97 1.35A1 1 0 0 1 3.73 1h8.54a1 1 0 0 1 .76.35l2.609 3.044A1.5 1.5 0 0 1 16 5.37v.255a2.375 2.375 0 0 1-4.25 1.458A2.371 2.371 0 0 1 9.875 8 2.37 2.37 0 0 1 8 7.083 2.37 2.37 0 0 1 6.125 8a2.37 2.37 0 0 1-1.875-.917A2.375 2.375 0 0 1 0 5.625V5.37a1.5 1.5 0 0 1 .361-.976l2.61-3.045zm1.78 4.275a1.375 1.375 0 0 0 2.75 0 .5.5 0 0 1 1 0 1.375 1.375 0 0 0 2.75 0 .5.5 0 0 1 1 0 1.375 1.375 0 1 0 2.75 0V5.37a.5.5 0 0 0-.12-.325L12.27 2H3.73L1.12 5.045A.5.5 0 0 0 1 5.37v.255a1.375 1.375 0 0 0 2.75 0 .5.5 0 0 1 1 0zM1.5 8.5A.5.5 0 0 1 2 9v6h1v-5a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1v5h6V9a.5.5 0 0 1 1 0v6h.5a.5.5 0 0 1 0 1H.5a.5.5 0 0 1 0-1H1V9a.5.5 0 0 1 .5-.5zM4 15h3v-5H4v5zm5-5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1v-3zm3 0h-2v3h2v-3z" />
+                </svg> <span>Boutique</span></a></li>
 
-      <?php } ?>
-          
-          
+
+          <?php } ?>
+
+
         </ul>
         <!-- /.sidebar-menu -->
       </section>
@@ -243,7 +256,9 @@ $(document).ready(function(){
     </aside>
 
     <html>
-<head>
-<meta http-equiv="refresh" content="3604">
-</head>
-</html>
+
+    <head>
+      <meta http-equiv="refresh" content="3604">
+    </head>
+
+    </html>

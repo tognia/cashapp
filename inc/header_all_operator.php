@@ -56,60 +56,67 @@
     <!-- chart Js -->
     <script src="chartjs/dist/Chart.min.js"></script>
     <style>
-    body{
+      body {
         font-family: Arail, sans-serif;
-    }
-    /* Formatting search box */
-    .search-box{
+      }
+
+      /* Formatting search box */
+      .search-box {
         width: 300px;
         position: relative;
         display: inline-block;
         font-size: 14px;
         margin-left: auto;
-        margin-right: auto; 
+        margin-right: auto;
         vertical-align: center;
-        
-    }
-    .search-box input[type="text"]{
+
+      }
+
+      .search-box input[type="text"] {
         height: 32px;
         padding: 5px 10px;
         border: 1px solid #92D7E5;
         font-size: 14px;
         margin-left: auto;
-        margin-right: auto; 
+        margin-right: auto;
         vertical-align: center;
-    }
-    .result{
-        position: absolute;        
+      }
+
+      .result {
+        position: absolute;
         z-index: 1000;
         top: 100%;
         left: 50px;
         margin-left: auto;
-        margin-right: auto; 
-    }
-    .search-box input[type="text"], .result{
+        margin-right: auto;
+      }
+
+      .search-box input[type="text"],
+      .result {
         width: 100%;
         box-sizing: border-box;
         color: blue;
         margin-left: auto;
-        margin-right: auto; 
-    }
-    /* Formatting result items */
-    .result p{
+        margin-right: auto;
+      }
+
+      /* Formatting result items */
+      .result p {
         margin: 0;
         padding: 7px 10px;
         border: 2px solid #92D7E5;
         border-top: none;
         cursor: pointer;
         margin-left: auto;
-        margin-right: auto; 
-    }
-    .result p:hover{
+        margin-right: auto;
+      }
+
+      .result p:hover {
         background: #f2f2f2;
         margin-left: auto;
-        margin-right: auto; 
-    }
-</style>
+        margin-right: auto;
+      }
+    </style>
 
 
 
@@ -197,12 +204,13 @@
           <li><a href="order.php"><i class="fa fa-shopping-cart"></i> <span>Operations Caisse</span></a></li>
           <li><a href="./product.php"><i class="fa fa-archive"></i> <span>Produits</span></a></li>
           <li><a href="product_shop_item.php"><i class="fa fa-archive"></i> <span>Produits en Boutique</span></a></li>
+          <li><a href="./edit_stock_shop_validation.php"><i class="fa fa-archive"></i> <span>Validation Produits Boutique</span></a></li>
           <?php
-              if($_SESSION['role']=="Responsable"){ 
+          if ($_SESSION['role'] == "Responsable") {
           ?>
-          <li><a href="./order_from_shop.php"><i class="fa fa-shopping-cart"></i> <span>Commandes</span></a></li>
+            <li><a href="./order_from_shop.php"><i class="fa fa-shopping-cart"></i> <span>Commandes</span></a></li>
           <?php
-              }
+          }
           ?>
           <li><a href="./customer.php"><i class="fa fa-users"></i> <span>Clients</span></a></li>
           <!-- <li><a href="./skills.php"><i class="fa fa-users"></i> <span>Shills</span></a></li> -->
