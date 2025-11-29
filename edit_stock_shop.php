@@ -22,7 +22,6 @@ if (!$id || !is_numeric($id)) {
 
 try {
     // --- 2a. Fetch product data for the shop item (tbl_shop_item) ---
-    // Note: Assuming 'id' in URL refers to product_id common in tbl_shop_item and tbl_product
     $select_shop_item = $pdo->prepare("SELECT * FROM tbl_shop_item WHERE product_id = :id");
     $select_shop_item->bindParam(':id', $id, PDO::PARAM_INT);
     $select_shop_item->execute();
@@ -33,10 +32,10 @@ try {
         exit();
     }
 
-    // Assign variables for current product
+    // Assign variables for current product (data needed for the form and shipment insertion)
     $id_db = $shop_item['product_id'];
     $productCode_db = $shop_item['product_code'];
-    $shopCode_db = $shop_item['shop_code'];
+    $shopCode_db = $shop_item['shop_code']; // Code de l'agence/boutique de destination
     $productName_db = $shop_item['product_name'];
     $productSku_db = $shop_item['product_sku'];
     $category_db = $shop_item['product_category'];
@@ -51,8 +50,7 @@ try {
     $supplier_db = $shop_item['supplier'];
     $desc_db = $shop_item['description'];
     $product_img = $shop_item['img'];
-    $stock_db = $shop_item['stock']; // Current shop stock
-    $_SESSION['shop_code'] = $shopCode_db; // Store shop code in session if needed
+    // $stock_db already assigned above
 
     // --- 2b. Fetch product data from main product table (for main stock) ---
     $select_product = $pdo->prepare("SELECT stock FROM tbl_product WHERE product_code = :product_code");
@@ -74,16 +72,22 @@ if (isset($_POST['update_product'])) {
 
     // --- 3.1. Sanitize and validate ALL input ---
     $product_id = filter_input(INPUT_POST, 'product_id', FILTER_SANITIZE_NUMBER_INT);
-    $stock_to_ship = filter_input(INPUT_POST, 'stock_to_ship', FILTER_SANITIZE_NUMBER_INT); // Changed name for clarity
+    $stock_to_ship = filter_input(INPUT_POST, 'stock_to_ship', FILTER_SANITIZE_NUMBER_INT);
+
+    // Get necessary product details from DB variables (already fetched)
+    $product_code_ship = $productCode_db;
+    $product_name_ship = $productName_db;
+    $product_sku_ship = $productSku_db;
+    $shop_code_ship = $shopCode_db;
 
     // NEW SHIPMENT FIELDS
     $shipment_date = filter_input(INPUT_POST, 'shipment_date', FILTER_SANITIZE_STRING);
-    $delivery_status = filter_input(INPUT_POST, 'delivery_status', FILTER_SANITIZE_STRING);
+    $delivery_status = 'Delivered'; // Fixed value based on form logic
     $notes = filter_input(INPUT_POST, 'notes', FILTER_SANITIZE_STRING);
 
     // Initial validation
     if (!$product_id || !is_numeric($product_id) || !is_numeric($stock_to_ship) || $stock_to_ship < 1) {
-        $message = '<div class="alert alert-danger">Identifiant de produit ou quantité invalide.</div>';
+        $message = '<div class="alert alert-danger">Identifiant de produit ou quantité invalide (minimum 1).</div>';
     } elseif (!$shipment_date) {
         $message = '<div class="alert alert-danger">La date d\'expédition est requise.</div>';
     } elseif (!$current_user_id) {
@@ -100,26 +104,49 @@ if (isset($_POST['update_product'])) {
         } else {
             try {
 
-
                 // Transactional updates for data consistency
                 $pdo->beginTransaction();
 
-                // 3a. INSERT record into tbl_product_shipment
-                // Note: destination_agence_id must be retrieved from the shop_item's shop_id
+                // 3a. INSERT record into tbl_product_shipment - MISE À JOUR ICI
                 $insert_shipment = $pdo->prepare("
-                    INSERT INTO tbl_product_shipment (shipment_date, product_id, shipped_quantity, code_agence, user_id, delivery_status, notes)
-                    VALUES (:date, :product_id, :quantity, :code_agence, :user_id, :status, :notes)
+                    INSERT INTO tbl_product_shipment (
+                        shipment_date, 
+                        product_id, 
+                        shipped_quantity, 
+                        code_agence, 
+                        user_id, 
+                        delivery_status, 
+                        notes,
+                        product_code,       -- NOUVEAU
+                        product_sku,        -- NOUVEAU
+                        product_name        -- NOUVEAU
+                    )
+                    VALUES (
+                        :date, 
+                        :product_id, 
+                        :quantity, 
+                        :code_agence, 
+                        :user_id, 
+                        :status, 
+                        :notes,
+                        :product_code,      -- NOUVEAU
+                        :product_sku,       -- NOUVEAU
+                        :product_name       -- NOUVEAU
+                    )
                 ");
 
                 $insert_shipment->bindParam(':date', $shipment_date);
                 $insert_shipment->bindParam(':product_id', $id_db, PDO::PARAM_INT);
                 $insert_shipment->bindParam(':quantity', $stock_to_ship, PDO::PARAM_INT);
-                $insert_shipment->bindParam(':code_agence',  $_SESSION['shop_code']);
-                $insert_shipment->bindParam(':user_id', $_SESSION['user_name']);
+                $insert_shipment->bindParam(':code_agence', $shop_code_ship, PDO::PARAM_STR); // Corrigé
+                $insert_shipment->bindParam(':user_id', $current_user_id, PDO::PARAM_INT); // Corrigé
                 // Status is 'Delivered' as per the requirement for immediate update
-                $status_delivered = 'Delivered';
-                $insert_shipment->bindParam(':status', $status_delivered);
+                $insert_shipment->bindParam(':status', $delivery_status);
                 $insert_shipment->bindParam(':notes', $notes);
+                // Liaison des nouvelles variables
+                $insert_shipment->bindParam(':product_code', $product_code_ship);
+                $insert_shipment->bindParam(':product_sku', $product_sku_ship);
+                $insert_shipment->bindParam(':product_name', $product_name_ship);
 
                 if ($insert_shipment->execute()) {
 
@@ -199,7 +226,7 @@ include_once 'inc/header_all.php';
                             <hr style="margin-top: 5px;">
                             <div class="form-group">
                                 <label>Stock Actuel en Boutique</label>
-                                <input type="number" class="form-control" value="<?php echo htmlspecialchars($stock_db); ?>">
+                                <input type="number" class="form-control" value="<?php echo htmlspecialchars($stock_db); ?>" readonly>
                             </div>
                             <div class="form-group">
                                 <label>Stock Principal (Entrepôt)</label>

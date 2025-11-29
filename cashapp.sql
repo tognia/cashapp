@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Hôte : 127.0.0.1:3306
--- Généré le :  jeu. 27 nov. 2025 à 08:39
+-- Généré le :  sam. 29 nov. 2025 à 18:46
 -- Version du serveur :  5.7.26
 -- Version de PHP :  7.2.18
 
@@ -876,14 +876,15 @@ CREATE TABLE IF NOT EXISTS `tbl_product` (
   `img` varchar(200) NOT NULL,
   PRIMARY KEY (`product_id`),
   UNIQUE KEY `product_code` (`product_code`,`product_name`)
-) ENGINE=InnoDB AUTO_INCREMENT=36 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=37 DEFAULT CHARSET=latin1;
 
 --
 -- Déchargement des données de la table `tbl_product`
 --
 
 INSERT INTO `tbl_product` (`product_id`, `product_code`, `product_sku`, `product_name`, `product_category`, `product_brand`, `supplier`, `purchase_price`, `sell_price`, `min_price`, `discount`, `stock`, `min_stock`, `product_satuan`, `description`, `place_in_storeroom`, `place_in_store`, `img`) VALUES
-(35, 'CA000233', '002CA000233', 'ZOBAZO', 'Accessoires et autre appareillage terminal', 'oko', 'OKOK chaud Manioc', 2500, 5000, 4000, 0, 40, 5, 'U', 'CA000233CA000233CA000233', 'RAS', 'RAS', '691ea6088d957.jpg');
+(35, 'CA000233', '002CA000233', 'ZOBAZO', 'Accessoires et autre appareillage terminal', 'oko', 'OKOK chaud Manioc', 2500, 5000, 4000, 0, 100, 5, 'U', 'CA000233CA000233CA000233', 'RAS', 'RAS', '691ea6088d957.jpg'),
+(36, 'PAO12345', 'PAO123450001', 'POTATO', 'Accessoires et autre appareillage terminal', 'BOUF', 'OKOK chaud Manioc', 1500, 3000, 2500, 0, 30, 10, 'U', 'POTATO BOUF', 'RAS', 'RAS', '692b284821d47.jpg');
 
 -- --------------------------------------------------------
 
@@ -896,6 +897,9 @@ CREATE TABLE IF NOT EXISTS `tbl_product_receipt` (
   `receipt_id` int(11) NOT NULL AUTO_INCREMENT,
   `receipt_date` date NOT NULL,
   `product_id` int(11) NOT NULL,
+  `product_code` varchar(50) NOT NULL,
+  `product_sku` varchar(50) NOT NULL,
+  `product_name` varchar(50) NOT NULL,
   `received_quantity` int(11) NOT NULL,
   `supplier_name` varchar(200) NOT NULL,
   `receipt_price` float(10,2) NOT NULL,
@@ -904,17 +908,19 @@ CREATE TABLE IF NOT EXISTS `tbl_product_receipt` (
   PRIMARY KEY (`receipt_id`),
   KEY `fk_product_id` (`product_id`),
   KEY `fk_user_id` (`user_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=latin1;
 
 --
 -- Déchargement des données de la table `tbl_product_receipt`
 --
 
-INSERT INTO `tbl_product_receipt` (`receipt_id`, `receipt_date`, `product_id`, `received_quantity`, `supplier_name`, `receipt_price`, `user_id`, `notes`) VALUES
-(1, '2025-11-24', 35, 20, 'OKOK chaud Manioc', 2500.00, 6, NULL),
-(2, '2025-11-25', 35, 10, 'OKOK chaud Manioc', 2500.00, 17, NULL),
-(3, '2025-11-26', 35, 49, 'OKOK chaud Manioc', 2500.00, 17, NULL),
-(4, '2025-11-26', 35, 1, 'OKOK chaud Manioc', 2500.00, 17, NULL);
+INSERT INTO `tbl_product_receipt` (`receipt_id`, `receipt_date`, `product_id`, `product_code`, `product_sku`, `product_name`, `received_quantity`, `supplier_name`, `receipt_price`, `user_id`, `notes`) VALUES
+(1, '2025-11-24', 35, '', '', '', 20, 'OKOK chaud Manioc', 2500.00, 6, NULL),
+(2, '2025-11-25', 35, '', '', '', 10, 'OKOK chaud Manioc', 2500.00, 17, NULL),
+(3, '2025-11-26', 35, '', '', '', 49, 'OKOK chaud Manioc', 2500.00, 17, NULL),
+(4, '2025-11-26', 35, '', '', '', 1, 'OKOK chaud Manioc', 2500.00, 17, NULL),
+(5, '2025-11-29', 35, 'CA000233', '002CA000233', 'ZOBAZO', 60, 'OKOK chaud Manioc', 2500.00, 17, NULL),
+(6, '2025-11-29', 35, 'CA000233', '002CA000233', 'ZOBAZO', 50, 'OKOK chaud Manioc', 2500.00, 17, NULL);
 
 -- --------------------------------------------------------
 
@@ -927,6 +933,9 @@ CREATE TABLE IF NOT EXISTS `tbl_product_shipment` (
   `shipment_id` int(11) NOT NULL AUTO_INCREMENT,
   `shipment_date` date NOT NULL,
   `product_id` int(11) NOT NULL,
+  `product_code` varchar(50) NOT NULL,
+  `product_sku` varchar(50) NOT NULL,
+  `product_name` varchar(50) NOT NULL,
   `shipped_quantity` int(11) NOT NULL,
   `code_agence` varchar(30) NOT NULL,
   `user_id` varchar(25) NOT NULL,
@@ -935,16 +944,15 @@ CREATE TABLE IF NOT EXISTS `tbl_product_shipment` (
   PRIMARY KEY (`shipment_id`),
   KEY `fk_ship_product_id` (`product_id`),
   KEY `fk_ship_user_id` (`user_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=12 DEFAULT CHARSET=latin1;
 
 --
 -- Déchargement des données de la table `tbl_product_shipment`
 --
 
-INSERT INTO `tbl_product_shipment` (`shipment_id`, `shipment_date`, `product_id`, `shipped_quantity`, `code_agence`, `user_id`, `delivery_status`, `notes`) VALUES
-(7, '2025-11-26', 91, 9, 'Eleveur', '17', 'Delivered', ''),
-(8, '2025-11-26', 91, 1, 'Eleveur', '17', 'Delivered', ''),
-(9, '2025-11-26', 91, 10, 'Eleveur', 'storekeeper', 'Delivered', '');
+INSERT INTO `tbl_product_shipment` (`shipment_id`, `shipment_date`, `product_id`, `product_code`, `product_sku`, `product_name`, `shipped_quantity`, `code_agence`, `user_id`, `delivery_status`, `notes`) VALUES
+(10, '2025-11-29', 91, 'CA000233', '002CA000233', 'ZOBAZO', 50, 'Eleveur', '17', 'accepted', ''),
+(11, '2025-11-29', 92, 'PAO12345', 'PAO123450001', 'POTATO', 45, 'Eleveur', '17', 'accepted', '');
 
 -- --------------------------------------------------------
 
@@ -1014,14 +1022,15 @@ CREATE TABLE IF NOT EXISTS `tbl_shop_item` (
   `place_in_store` varchar(50) NOT NULL,
   `img` varchar(200) NOT NULL,
   PRIMARY KEY (`product_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=92 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=93 DEFAULT CHARSET=latin1;
 
 --
 -- Déchargement des données de la table `tbl_shop_item`
 --
 
 INSERT INTO `tbl_shop_item` (`product_id`, `shop_code`, `product_code`, `product_sku`, `product_name`, `product_category`, `product_brand`, `supplier`, `purchase_price`, `sell_price`, `min_price`, `discount`, `stock`, `min_stock`, `product_satuan`, `description`, `place_in_store`, `img`) VALUES
-(91, 'Eleveur', 'CA000233', '002CA000233', 'ZOBAZO', 'Accessoires et autre appareillage terminal', 'oko', 'OKOK chaud Manioc', 2500, 5000, 4000, 0, 0, 0, 'U', 'CA000233CA000233CA000233', 'RAS', '691ea6088d957.jpg');
+(91, 'Eleveur', 'CA000233', '002CA000233', 'ZOBAZO', 'Accessoires et autre appareillage terminal', 'oko', 'OKOK chaud Manioc', 2500, 5000, 4000, 0, 100, 0, 'U', 'CA000233CA000233CA000233', 'RAS', '691ea6088d957.jpg'),
+(92, 'Eleveur', 'PAO12345', 'PAO123450001', 'POTATO', 'Accessoires et autre appareillage terminal', 'BOUF', 'OKOK chaud Manioc', 1500, 3000, 2500, 0, 90, 0, 'U', 'POTATO BOUF', 'RAS', '692b284821d47.jpg');
 
 -- --------------------------------------------------------
 

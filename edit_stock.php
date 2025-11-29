@@ -65,10 +65,15 @@ if (isset($_POST['update_product'])) {
 
     // 3.1. Nettoyage et Validation des entrées
     $product_id = filter_input(INPUT_POST, 'product_id', FILTER_SANITIZE_NUMBER_INT);
+    // Récupération des valeurs nécessaires pour l'insertion dans tbl_product_receipt
+    $product_code = filter_input(INPUT_POST, 'product_code');
+    $product_sku = filter_input(INPUT_POST, 'product_sku');
+    $product_name = filter_input(INPUT_POST, 'product_name');
+
     $received_quantity = filter_input(INPUT_POST, 'received_quantity', FILTER_SANITIZE_NUMBER_INT);
     $receipt_price = filter_input(INPUT_POST, 'receipt_price', FILTER_SANITIZE_NUMBER_FLOAT, FILTER_FLAG_ALLOW_FRACTION);
-    $supplier_name = filter_input(INPUT_POST, 'supplier_name', FILTER_SANITIZE_STRING);
-    $receipt_date = filter_input(INPUT_POST, 'receipt_date', FILTER_SANITIZE_STRING);
+    $supplier_name = filter_input(INPUT_POST, 'supplier_name');
+    $receipt_date = filter_input(INPUT_POST, 'receipt_date');
 
     if (!$product_id || !is_numeric($product_id) || !is_numeric($received_quantity) || $received_quantity < 1) {
         $message = '<div class="alert alert-danger">Quantité reçue invalide (minimum 1).</div>';
@@ -83,10 +88,30 @@ if (isset($_POST['update_product'])) {
             // Démarrer la transaction
             $pdo->beginTransaction();
 
-            // 3.2. Insertion dans tbl_product_receipt
+            // 3.2. Insertion dans tbl_product_receipt - MISE À JOUR ICI
             $insert_receipt = $pdo->prepare("
-                INSERT INTO tbl_product_receipt (receipt_date, product_id, received_quantity, supplier_name, receipt_price, user_id)
-                VALUES (:date, :product_id, :quantity, :supplier, :price, :user_id)
+                INSERT INTO tbl_product_receipt (
+                    receipt_date, 
+                    product_id, 
+                    received_quantity, 
+                    supplier_name, 
+                    receipt_price, 
+                    user_id,
+                    product_code,      -- NOUVEAU
+                    product_sku,       -- NOUVEAU
+                    product_name       -- NOUVEAU
+                )
+                VALUES (
+                    :date, 
+                    :product_id, 
+                    :quantity, 
+                    :supplier, 
+                    :price, 
+                    :user_id,
+                    :product_code,     -- NOUVEAU
+                    :product_sku,      -- NOUVEAU
+                    :product_name      -- NOUVEAU
+                )
             ");
 
             $insert_receipt->bindParam(':date', $receipt_date);
@@ -95,6 +120,11 @@ if (isset($_POST['update_product'])) {
             $insert_receipt->bindParam(':supplier', $supplier_name);
             $insert_receipt->bindParam(':price', $receipt_price);
             $insert_receipt->bindParam(':user_id', $current_user_id, PDO::PARAM_INT);
+            // Liaison des nouvelles variables - NOUVEAU
+            $insert_receipt->bindParam(':product_code', $product_code);
+            $insert_receipt->bindParam(':product_sku', $product_sku);
+            $insert_receipt->bindParam(':product_name', $product_name);
+
 
             if ($insert_receipt->execute()) {
 
@@ -162,6 +192,10 @@ include_once 'inc/header_all.php';
                             <h4 class="text-success">Informations Produit</h4>
                             <hr style="margin-top: 5px;">
                             <input type="hidden" name="product_id" value="<?php echo htmlspecialchars($id_db); ?>">
+                            <input type="hidden" name="product_code" value="<?php echo htmlspecialchars($productCode_db); ?>">
+                            <input type="hidden" name="product_sku" value="<?php echo htmlspecialchars($productSku_db); ?>">
+                            <input type="hidden" name="product_name" value="<?php echo htmlspecialchars($productName_db); ?>">
+
 
                             <div class="form-group">
                                 <label>Code Produit</label>

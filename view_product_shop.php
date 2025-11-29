@@ -9,7 +9,7 @@ if ($_SESSION['user_name'] == "") {
     include_once 'inc/header_all_operator.php';
   }
 }
-echo $_SESSION['shop_code'];
+
 ?>
 
 <!-- Content Wrapper. Contains page content -->
