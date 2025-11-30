@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Hôte : 127.0.0.1:3306
--- Généré le :  sam. 29 nov. 2025 à 18:46
+-- Généré le :  Dim 30 nov. 2025 à 17:29
 -- Version du serveur :  5.7.26
 -- Version de PHP :  7.2.18
 
@@ -883,8 +883,8 @@ CREATE TABLE IF NOT EXISTS `tbl_product` (
 --
 
 INSERT INTO `tbl_product` (`product_id`, `product_code`, `product_sku`, `product_name`, `product_category`, `product_brand`, `supplier`, `purchase_price`, `sell_price`, `min_price`, `discount`, `stock`, `min_stock`, `product_satuan`, `description`, `place_in_storeroom`, `place_in_store`, `img`) VALUES
-(35, 'CA000233', '002CA000233', 'ZOBAZO', 'Accessoires et autre appareillage terminal', 'oko', 'OKOK chaud Manioc', 2500, 5000, 4000, 0, 100, 5, 'U', 'CA000233CA000233CA000233', 'RAS', 'RAS', '691ea6088d957.jpg'),
-(36, 'PAO12345', 'PAO123450001', 'POTATO', 'Accessoires et autre appareillage terminal', 'BOUF', 'OKOK chaud Manioc', 1500, 3000, 2500, 0, 30, 10, 'U', 'POTATO BOUF', 'RAS', 'RAS', '692b284821d47.jpg');
+(35, 'CA000233', '002CA000233', 'ZOBAZO', 'Accessoires et autre appareillage terminal', 'oko', 'OKOK chaud Manioc', 2500, 5000, 4000, 0, 0, 5, 'U', 'CA000233CA000233CA000233', 'RAS', 'RAS', '691ea6088d957.jpg'),
+(36, 'PAO12345', 'PAO123450001', 'POTATO', 'Accessoires et autre appareillage terminal', 'BOUF', 'OKOK chaud Manioc', 1500, 3000, 2500, 0, 2, 10, 'U', 'POTATO BOUF', 'RAS', 'RAS', '692b284821d47.jpg');
 
 -- --------------------------------------------------------
 
@@ -944,7 +944,7 @@ CREATE TABLE IF NOT EXISTS `tbl_product_shipment` (
   PRIMARY KEY (`shipment_id`),
   KEY `fk_ship_product_id` (`product_id`),
   KEY `fk_ship_user_id` (`user_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=12 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=25 DEFAULT CHARSET=latin1;
 
 --
 -- Déchargement des données de la table `tbl_product_shipment`
@@ -952,7 +952,20 @@ CREATE TABLE IF NOT EXISTS `tbl_product_shipment` (
 
 INSERT INTO `tbl_product_shipment` (`shipment_id`, `shipment_date`, `product_id`, `product_code`, `product_sku`, `product_name`, `shipped_quantity`, `code_agence`, `user_id`, `delivery_status`, `notes`) VALUES
 (10, '2025-11-29', 91, 'CA000233', '002CA000233', 'ZOBAZO', 50, 'Eleveur', '17', 'accepted', ''),
-(11, '2025-11-29', 92, 'PAO12345', 'PAO123450001', 'POTATO', 45, 'Eleveur', '17', 'accepted', '');
+(11, '2025-11-29', 92, 'PAO12345', 'PAO123450001', 'POTATO', 45, 'Eleveur', '17', 'accepted', ''),
+(12, '2025-11-30', 91, 'CA000233', '002CA000233', 'ZOBAZO', 20, 'Eleveur', '19', 'accepted', ''),
+(13, '2025-11-30', 91, 'CA000233', '002CA000233', 'ZOBAZO', 30, 'Eleveur', '19', 'accepted', ''),
+(14, '2025-11-30', 92, 'PAO12345', 'PAO123450001', 'POTATO', 10, 'Eleveur', '19', 'accepted', ''),
+(15, '2025-11-30', 92, 'PAO12345', 'PAO123450001', 'POTATO', 5, 'Eleveur', '19', 'accepted', ''),
+(16, '2025-11-30', 91, 'CA000233', '002CA000233', 'ZOBAZO', 25, 'Eleveur', '17', 'accepted', ''),
+(17, '2025-11-30', 91, 'CA000233', '002CA000233', 'ZOBAZO', 5, 'Eleveur', '17', 'accepted', ''),
+(18, '2025-11-30', 92, 'PAO12345', 'PAO123450001', 'POTATO', 5, 'Eleveur', '17', 'accepted', ''),
+(19, '2025-11-30', 91, 'CA000233', '002CA000233', 'ZOBAZO', 5, 'Eleveur', '17', 'accepted', ''),
+(20, '2025-11-30', 91, 'CA000233', '002CA000233', 'ZOBAZO', 5, 'Eleveur', '17', 'accepted', ''),
+(21, '2025-11-30', 91, 'CA000233', '002CA000233', 'ZOBAZO', 6, 'Eleveur', '17', 'accepted', ''),
+(22, '2025-11-30', 91, 'CA000233', '002CA000233', 'ZOBAZO', 4, 'Eleveur', '17', 'accepted', ''),
+(23, '2025-11-30', 92, 'PAO12345', 'PAO123450001', 'POTATO', 5, 'Eleveur', '17', 'accepted', ''),
+(24, '2025-11-30', 92, 'PAO12345', 'PAO123450001', 'POTATO', 3, 'Eleveur', '17', 'accepted', '');
 
 -- --------------------------------------------------------
 
@@ -1030,7 +1043,7 @@ CREATE TABLE IF NOT EXISTS `tbl_shop_item` (
 
 INSERT INTO `tbl_shop_item` (`product_id`, `shop_code`, `product_code`, `product_sku`, `product_name`, `product_category`, `product_brand`, `supplier`, `purchase_price`, `sell_price`, `min_price`, `discount`, `stock`, `min_stock`, `product_satuan`, `description`, `place_in_store`, `img`) VALUES
 (91, 'Eleveur', 'CA000233', '002CA000233', 'ZOBAZO', 'Accessoires et autre appareillage terminal', 'oko', 'OKOK chaud Manioc', 2500, 5000, 4000, 0, 100, 0, 'U', 'CA000233CA000233CA000233', 'RAS', '691ea6088d957.jpg'),
-(92, 'Eleveur', 'PAO12345', 'PAO123450001', 'POTATO', 'Accessoires et autre appareillage terminal', 'BOUF', 'OKOK chaud Manioc', 1500, 3000, 2500, 0, 90, 0, 'U', 'POTATO BOUF', 'RAS', '692b284821d47.jpg');
+(92, 'Eleveur', 'PAO12345', 'PAO123450001', 'POTATO', 'Accessoires et autre appareillage terminal', 'BOUF', 'OKOK chaud Manioc', 1500, 3000, 2500, 0, 28, 0, 'U', 'POTATO BOUF', 'RAS', '692b284821d47.jpg');
 
 -- --------------------------------------------------------
 

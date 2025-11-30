@@ -191,7 +191,8 @@
             <img src="img/BEVILECLOGO.png" class="img-circle" alt="User Image">
           </div>
           <div class="pull-left info">
-            <p><?php echo $_SESSION['user_name']; ?></p>
+            <p><?php echo $_SESSION['user_name'];
+                ?></p>
             <!-- Status -->
             <a href="#"><i class="fa fa-circle text-success"></i> Online</a>
           </div>
@@ -201,18 +202,25 @@
           <li class="header">Main Menu</li>
           <!-- Optionally, you can add icons to the links -->
           <li><a href="dashboard.php"><i class="fa fa-dashboard"></i> <span>Accueil</span></a></li>
-          <li><a href="order.php"><i class="fa fa-shopping-cart"></i> <span>Operations Caisse</span></a></li>
-          <li><a href="./product.php"><i class="fa fa-archive"></i> <span>Produits</span></a></li>
-          <li><a href="product_shop_item.php"><i class="fa fa-archive"></i> <span>Produits en Boutique</span></a></li>
-          <li><a href="./edit_stock_shop_validation.php"><i class="fa fa-archive"></i> <span>Validation Produits Boutique</span></a></li>
           <?php
-          if ($_SESSION['role'] == "Responsable") {
+          if ($_SESSION['role'] == "Responsable" || $_SESSION['role'] == "Admin" || $_SESSION['role'] == "Operator") {
           ?>
-            <li><a href="./order_from_shop.php"><i class="fa fa-shopping-cart"></i> <span>Commandes</span></a></li>
+            <li><a href="order.php"><i class="fa fa-shopping-cart"></i> <span>Operations Caisse</span></a></li>
           <?php
           }
           ?>
-          <li><a href="./customer.php"><i class="fa fa-users"></i> <span>Clients</span></a></li>
+          <li><a href="./product.php"><i class="fa fa-archive"></i> <span>Produits</span></a></li>
+          <li><a href="product_shop_item.php"><i class="fa fa-archive"></i> <span>Produits en Boutique</span></a></li>
+
+          <?php
+          if ($_SESSION['role'] == "Responsable" || $_SESSION['role'] == "Admin" || $_SESSION['role'] == "Operator") {
+          ?>
+            <!-- <li><a href="./order_from_shop.php"><i class="fa fa-shopping-cart"></i> <span>Commandes</span></a></li> -->
+
+            <li><a href="./customer.php"><i class="fa fa-users"></i> <span>Clients</span></a></li>
+          <?php
+          }
+          ?>
           <!-- <li><a href="./skills.php"><i class="fa fa-users"></i> <span>Shills</span></a></li> -->
         </ul>
         <!-- /.sidebar-menu -->

@@ -94,6 +94,7 @@ if (isset($_POST['update_product'])) {
         $message = '<div class="alert alert-danger">Erreur: Identifiant utilisateur non disponible.</div>';
     } else {
 
+        $_SESSION['stock_to_ship'] = $stock_to_ship;
         // Recalculate stock values
         $new_shop_stock = $stock_db + $stock_to_ship;
         $new_main_stock = $stock_db1 - $stock_to_ship;
@@ -157,10 +158,10 @@ if (isset($_POST['update_product'])) {
                     $update_main->execute();
 
                     // 3c. Update stock in tbl_shop_item - ADDITION
-                    $update_shop = $pdo->prepare("UPDATE tbl_shop_item SET stock = :stock WHERE product_id = :id");
-                    $update_shop->bindParam(':stock', $new_shop_stock, PDO::PARAM_INT);
-                    $update_shop->bindParam(':id', $product_id, PDO::PARAM_INT);
-                    $update_shop->execute();
+                    // $update_shop = $pdo->prepare("UPDATE tbl_shop_item SET stock = :stock WHERE product_id = :id");
+                    // $update_shop->bindParam(':stock', $new_shop_stock, PDO::PARAM_INT);
+                    // $update_shop->bindParam(':id', $product_id, PDO::PARAM_INT);
+                    // $update_shop->execute();
 
                     $pdo->commit();
 
@@ -182,9 +183,11 @@ if (isset($_POST['update_product'])) {
     }
 }
 
-
-// HTML output starts here
-include_once 'inc/header_all.php';
+if ($_SESSION['role'] == "Admin") {
+    include_once 'inc/header_all.php';
+} else {
+    include_once 'inc/header_all_operator.php';
+}
 ?>
 
 <div class="content-wrapper">

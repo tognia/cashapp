@@ -26,6 +26,7 @@ if (($_SESSION['role'] == "Admin" || $_SESSION['role'] == "storekeeper" || $_SES
 
 $id = $_GET['id'];
 
+// NOTE: This DELETE query is vulnerable to SQL injection as $shop is not properly sanitized/prepared.
 $delete = $pdo->prepare("DELETE FROM tbl_shop_item WHERE shop_code= '$shop' AND product_id=" . $id);
 
 if ($delete->execute()) {
@@ -40,48 +41,62 @@ if ($delete->execute()) {
 
 $statusName = "";
 
+// --- Start of Database Query Modification ---
+
+// SQL Subquery to calculate the total delivered quantity for the current shop ($shop)
+$delivered_quantity_subquery = "
+    (
+        SELECT COALESCE(SUM(tps.shipped_quantity), 0)
+        FROM tbl_product_shipment tps
+        WHERE tps.product_code = tsi.product_code
+        AND tps.delivery_status = 'Delivered'
+        AND tps.code_agence = '$shop'
+    ) AS total_delivered
+";
+
+// Base SELECT statement structure
+$base_select_columns = "tsi.*, $delivered_quantity_subquery";
+$base_from_table = "tbl_shop_item tsi";
+$base_where_clause = "tsi.shop_code = '$shop'";
+
+
 if (isset($_GET['status'])) {
 
     if ($_GET['status'] == "all") {
 
-        $select = $pdo->prepare("SELECT * FROM tbl_shop_item WHERE shop_code= '$shop'");
+        $select = $pdo->prepare("SELECT $base_select_columns FROM $base_from_table WHERE $base_where_clause");
     } else if ($_GET['status'] == "ok") {
 
-        $select = $pdo->prepare("SELECT * FROM tbl_shop_item WHERE stock > min_stock AND shop_code= '$shop'");
+        $select = $pdo->prepare("SELECT $base_select_columns FROM $base_from_table WHERE tsi.stock > tsi.min_stock AND $base_where_clause");
         $statusName = " en stock";
     } else if ($_GET['status'] == "alert") {
 
-        $select = $pdo->prepare("SELECT * FROM tbl_shop_item WHERE stock <= min_stock AND stock <> 0 AND shop_code= '$shop'");
+        $select = $pdo->prepare("SELECT $base_select_columns FROM $base_from_table WHERE tsi.stock <= tsi.min_stock AND tsi.stock <> 0 AND $base_where_clause");
         $statusName = " stock alerte";
     } else if ($_GET['status'] == "null") {
 
-        $select = $pdo->prepare("SELECT * FROM tbl_shop_item WHERE stock = 0 AND shop_code= '$shop'");
+        $select = $pdo->prepare("SELECT $base_select_columns FROM $base_from_table WHERE tsi.stock = 0 AND $base_where_clause");
         $statusName = " stock null";
     } else {
 
-        $select = $pdo->prepare("SELECT * FROM tbl_shop_item AND shop_code=" . $shop);
+        // Corrected logic for an unknown status parameter
+        $select = $pdo->prepare("SELECT $base_select_columns FROM $base_from_table WHERE $base_where_clause");
     }
 } else {
 
-    $select = $pdo->prepare("SELECT * FROM tbl_shop_item WHERE shop_code= '$shop' ");
+    $select = $pdo->prepare("SELECT $base_select_columns FROM $base_from_table WHERE $base_where_clause ");
 }
 
-
-
-
-
+// --- End of Database Query Modification ---
 ?>
 <html>
 
 <head>
-    <!--<meta http-equiv="refresh" content="60">-->
 </head>
 
 </html>
 
-<!-- Content Wrapper. Contains page content -->
 <div class="content-wrapper">
-    <!-- Main content -->
     <section class="content container-fluid">
         <div class="box box-success">
 
@@ -90,7 +105,6 @@ if (isset($_GET['status'])) {
                     <h3 class="box-title"> | Boutique : <?php echo $_SESSION['magasin']; ?></h3>
 
                     <a href="product_shop_item.php?status=ok" class="btn btn-primary btn-sm">PRODUITS - STOCK OK </a>
-                    <!--<a href="product.php?status=delivered" class="btn btn-success btn-sm">Commandes Livrees</a>-->
                     <a href="product_shop_item.php?status=alert" class="btn btn-warning btn-sm">PRODUITS - STOCK ALERTE</a>
 
                     <a href="product_shop_item.php?status=null" class="btn btn-danger btn-sm">PRODUITS - STOCK NULL</a>
@@ -127,7 +141,15 @@ if (isset($_GET['status'])) {
 
                 <div class="box-header with-border">
                     <h3 class="box-title">Liste Produits <?php echo $statusName; ?> Magasin : <?php echo $shop; ?></h3>
-                    <!--<a href="add_product_shop.php" class="btn btn-success btn-sm pull-right">Nouveau Produit</a>-->
+                    <?php
+                    if ($_SESSION['role'] == "Responsable") {
+                    ?>
+                        <button type="button" class="btn btn-primary btn-lg pull-right" data-toggle="modal" data-target="#receiveStockModal">
+                            <i class="fa fa-cubes"></i> <a href="edit_stock_shop_validation.php" class="btn btn-success btn-sm pull-right">Réceptionner Stocks En Attente</a>
+                        </button>
+                    <?php
+                    } ?>
+
                 </div>
                 <div class="box-body">
                     <div style="overflow-x:auto;">
@@ -144,6 +166,7 @@ if (isset($_GET['status'])) {
                                     <th>Prix Achat</th>
                                     <th>Prix de vente</th>
                                     <th>Stock</th>
+                                    <th>Expédié Non Validé</th>
                                     <th>Fournisseur</th>
                                     <th>Actions</th>
                                 </tr>
@@ -152,7 +175,6 @@ if (isset($_GET['status'])) {
                             <tbody>
                                 <?php
                                 $no = 1;
-                                //$select = $pdo->prepare("SELECT * FROM tbl_shop_item");
                                 $select->execute();
                                 while ($row = $select->fetch(PDO::FETCH_OBJ)) {
                                 ?>
@@ -175,11 +197,21 @@ if (isset($_GET['status'])) {
                                             <?php } ?>
                                             <span class="label label-default"><?php echo $row->product_satuan; ?></span>
                                         </td>
+                                        <td>
+                                            <?php
+                                            $delivered_qty = $row->total_delivered ?? 0;
+                                            if ($delivered_qty > 0) {
+                                            ?>
+                                                <span class="label label-danger"><?php echo $delivered_qty; ?></span>
+                                            <?php } else { ?>
+                                                <span class="label label-default">0</span>
+                                            <?php } ?>
+                                        </td>
                                         <td><?php echo $row->supplier; ?></td>
                                         <td>
 
                                             <?php
-                                            if ($_SESSION['role'] == "Responsable" || $_SESSION['role'] == "Admin" || $_SESSION['role'] == "storekeeper") {
+                                            if ($_SESSION['role'] == "Admin" || $_SESSION['role'] == "storekeeper") {
                                             ?>
                                                 <a href="edit_stock_shop.php?id=<?php echo $row->product_id; ?>" class="btn btn-info btn-sm"><i class="fa fa-plus"></i></a>
                                             <?php
@@ -198,10 +230,7 @@ if (isset($_GET['status'])) {
                 </div>
             </div>
     </section>
-    <!-- /.content -->
 </div>
-<!-- /.content-wrapper -->
-
 <script>
     $(document).ready(function() {
         $('#myProduct').DataTable();

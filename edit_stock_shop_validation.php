@@ -8,14 +8,14 @@ if (!isset($_SESSION['role']) || ($_SESSION['role'] !== "Admin" && $_SESSION['ro
     exit();
 }
 
-include_once 'inc/header_all.php';
+if ($_SESSION['role'] == "Admin") {
+    include_once 'inc/header_all.php';
+} else {
+    include_once 'inc/header_all_operator.php';
+}
 
-// --- PHP LOGIC: PROCESS RECEIVED SHIPMENTS (Adaptation pour AJAX) ---
-if (isset($_POST['accept_shipments_ajax'])) {
-
-    // Définir l'en-tête pour indiquer que nous renvoyons du JSON
-    header('Content-Type: application/json');
-    $response = ['status' => 'error', 'message' => 'Erreur inconnue.'];
+// --- PHP LOGIC: PROCESS RECEIVED SHIPMENTS ---
+if (isset($_POST['accept_shipments'])) {
 
     // Validate that shipments were selected
     if (!empty($_POST['shipment_ids']) && is_array($_POST['shipment_ids'])) {
@@ -29,12 +29,16 @@ if (isset($_POST['accept_shipments_ajax'])) {
             $pdo->beginTransaction();
 
             // Prepare statements outside the loop for performance
-            $stmt_get = $pdo->prepare("SELECT product_id, shipped_quantity, code_agence FROM tbl_product_shipment WHERE shipment_id = :id AND delivery_status = 'Delivered'");
-            $stmt_update_stock = $pdo->prepare("UPDATE tbl_shop_item SET stock = stock + :qty WHERE product_id = :pid AND shop_code = :shop_code");
-            $stmt_update_status = $pdo->prepare("UPDATE tbl_product_shipment SET delivery_status = 'accepted', user_id = :user_id WHERE shipment_id = :id");
 
-            // Récupérer l'ID utilisateur actuel (à adapter si le nom de la variable de session est différent)
-            $user_id = $_SESSION['user_id'] ?? ($_SESSION['username'] ?? 'System');
+            // 1. Get shipment details (Locking row for update if needed, but simple select is usually fine here)
+            $stmt_get = $pdo->prepare("SELECT product_id, shipped_quantity, code_agence FROM tbl_product_shipment WHERE shipment_id = :id AND delivery_status = 'Delivered'");
+
+            // 2. Update Shop Stock (Add quantity)
+            // We match by product_id and shop_code (code_agence)
+            $stmt_update_stock = $pdo->prepare("UPDATE tbl_shop_item SET stock = stock + :qty WHERE product_id = :pid AND shop_code = :shop_code");
+
+            // 3. Update Shipment Status to 'accepted'
+            $stmt_update_status = $pdo->prepare("UPDATE tbl_product_shipment SET delivery_status = 'accepted' WHERE shipment_id = :id");
 
             foreach ($shipment_ids as $s_id) {
                 // A. Fetch shipment data
@@ -52,9 +56,10 @@ if (isset($_POST['accept_shipments_ajax'])) {
                     // Check if stock was actually updated (Item exists in shop)
                     if ($stmt_update_stock->rowCount() > 0) {
                         // C. Update Shipment Status
-                        $stmt_update_status->execute([':id' => $s_id, ':user_id' => $user_id]);
+                        $stmt_update_status->execute([':id' => $s_id]);
                         $success_count++;
                     } else {
+                        // Logic if item doesn't exist in tbl_shop_item yet
                         $error_count++;
                     }
                 }
@@ -63,30 +68,44 @@ if (isset($_POST['accept_shipments_ajax'])) {
             // Commit changes
             $pdo->commit();
 
-            // Renvoyer la réponse JSON au lieu de la redirection
+            // Feedback Messages
             if ($success_count > 0) {
-                $response['status'] = 'success';
-                $response['message'] = $success_count . ' expédition(s) acceptée(s) et stock mis à jour.';
+                echo '<script type="text/javascript">
+                         jQuery(function validation(){
+                         swal("Succès", "' . $success_count . ' expédition(s) acceptée(s) et stock mis à jour.", "success", {
+                         button: "Continuer",
+                            }).then(() => { window.location.href = "product_shop_item.php"; });
+                         });
+                         </script>';
             } elseif ($error_count > 0) {
-                $response['status'] = 'warning';
-                $response['message'] = 'Certains produits n\'ont pas pu être mis à jour (Produit introuvable dans la boutique ?).';
-            } else {
-                $response['status'] = 'warning';
-                $response['message'] = 'Aucune expédition valide traitée.';
+                echo '<script type="text/javascript">
+                         jQuery(function validation(){
+                         swal("Attention", "Certains produits n\'ont pas pu être mis à jour (Produit introuvable dans la boutique ?)", "warning", {
+                         button: "Continuer",
+                            });
+                         });
+                         </script>';
             }
         } catch (PDOException $e) {
             $pdo->rollBack();
             error_log("Stock Reception Error: " . $e->getMessage());
-            $response['status'] = 'error';
-            $response['message'] = 'Erreur Base de Données: ' . $e->getMessage();
+            echo '<script type="text/javascript">
+                     jQuery(function validation(){
+                     swal("Erreur Base de Données", "Une erreur est survenue: ' . $e->getMessage() . '", "error", {
+                     button: "Continuer",
+                        });
+                     });
+                     </script>';
         }
     } else {
-        $response['status'] = 'warning';
-        $response['message'] = 'Veuillez sélectionner au moins une ligne.';
+        echo '<script type="text/javascript">
+                 jQuery(function validation(){
+                 swal("Attention", "Veuillez sélectionner au moins une ligne.", "warning", {
+                 button: "Continuer",
+                    });
+                 });
+                 </script>';
     }
-
-    echo json_encode($response);
-    exit; // Terminer le script après avoir envoyé la réponse JSON
 }
 ?>
 
@@ -101,7 +120,7 @@ if (isset($_POST['accept_shipments_ajax'])) {
             <li class="active">Réception Stock</li>
         </ol>
     </section>
-    <hr>
+    ---
     <section class="content container-fluid">
 
         <div class="box box-primary">
@@ -124,52 +143,34 @@ if (isset($_POST['accept_shipments_ajax'])) {
                     <table class="table table-bordered table-hover" id="historyTable">
                         <thead>
                             <tr>
-                                <th class="text-center" style="width: 5%;">ID</th>
-                                <th style="width: 15%;">Date</th>
-                                <th style="width: 30%;">Produit</th>
-                                <th style="width: 15%;">Agence</th>
-                                <th class="text-center" style="width: 10%;">Quantité</th>
-                                <th style="width: 15%;">Reçu Par</th>
-                                <th class="text-center" style="width: 10%;">Statut</th>
+                                <th>ID</th>
+                                <th>Date</th>
+                                <th>Produit</th>
+                                <th>Agence</th>
+                                <th>Quantité</th>
+                                <th>Reçu Par</th>
+                                <th>Statut</th>
                             </tr>
                         </thead>
                         <tbody>
                             <?php
                             // Show last 20 accepted shipments
+                            // On peut maintenant utiliser product_name et product_code directement de tbl_product_shipment
                             $stmt_hist = $pdo->prepare("SELECT s.* FROM tbl_product_shipment s 
-                                    WHERE s.delivery_status = 'accepted' 
-                                    ORDER BY s.shipment_id DESC LIMIT 20");
+                                                     WHERE s.delivery_status = 'accepted' 
+                                                     ORDER BY s.shipment_id DESC LIMIT 20");
                             $stmt_hist->execute();
-
                             while ($row = $stmt_hist->fetch(PDO::FETCH_ASSOC)) {
                                 echo '<tr>';
-
-                                // ID (Centré)
-                                echo '<td class="text-center" style="vertical-align: middle;">' . htmlspecialchars($row['shipment_id']) . '</td>';
-
-                                // Date
-                                echo '<td style="vertical-align: middle;">' . date('d-m-Y', strtotime($row['shipment_date'])) . '</td>';
-
-                                // Produit (Nom/Code)
-                                echo '<td style="vertical-align: middle;"><strong>' . htmlspecialchars($row['product_name']) . '</strong> <br><small class="text-muted">Code: ' . htmlspecialchars($row['product_code']) . '</small></td>';
-
-                                // Agence
-                                echo '<td style="vertical-align: middle;">' . htmlspecialchars($row['code_agence']) . '</td>';
-
-                                // Quantité (Centré)
-                                echo '<td class="text-center" style="vertical-align: middle;">' . htmlspecialchars($row['shipped_quantity']) . '</td>';
-
-                                // Reçu Par
-                                echo '<td style="vertical-align: middle;">' . htmlspecialchars($row['user_id']) . '</td>';
-
-                                // Statut (Centré)
-                                echo '<td class="text-center" style="vertical-align: middle;"><span class="label label-success">Accepté</span></td>';
-
+                                echo '<td>' . $row['shipment_id'] . '</td>';
+                                echo '<td>' . date('d-m-Y', strtotime($row['shipment_date'])) . '</td>';
+                                // Utiliser le nom du produit stocké dans la table d'expédition
+                                echo '<td><strong>' . $row['product_name'] . '</strong> <small class="text-muted">(' . $row['product_code'] . ')</small></td>';
+                                echo '<td>' . $row['code_agence'] . '</td>';
+                                echo '<td>' . $row['shipped_quantity'] . '</td>';
+                                echo '<td>' . $row['user_id'] . '</td>';
+                                echo '<td><span class="label label-success">Accepté</span></td>';
                                 echo '</tr>';
-                            }
-
-                            if ($stmt_hist->rowCount() === 0) {
-                                echo '<tr><td colspan="7" class="text-center text-muted">Aucun historique d\'expédition acceptée.</td></tr>';
                             }
                             ?>
                         </tbody>
@@ -178,7 +179,7 @@ if (isset($_POST['accept_shipments_ajax'])) {
             </div>
         </div>
     </section>
-    <hr>
+    ---
     <div class="modal fade" id="receiveStockModal" tabindex="-1" role="dialog" aria-labelledby="receiveStockModalLabel">
         <div class="modal-dialog modal-lg" role="document">
             <div class="modal-content">
@@ -187,26 +188,27 @@ if (isset($_POST['accept_shipments_ajax'])) {
                     <h4 class="modal-title" id="receiveStockModalLabel"><i class="fa fa-truck"></i> Liste des Expéditions en Attente</h4>
                 </div>
 
-                <form id="receiveShipmentsForm" method="POST">
+                <form action="" method="POST">
                     <div class="modal-body">
                         <div class="table-responsive">
                             <table class="table table-bordered table-striped" id="shipmentTable">
                                 <thead>
                                     <tr class="bg-gray">
-                                        <th class="text-center" style="width: 30px;">
+                                        <th class="text-center" style="width: 50px;">
                                             <input type="checkbox" id="selectAll">
                                         </th>
-                                        <th style="width: 30%;">Produit (Nom / Code)</th>
-                                        <th style="width: 15%;">Code Agence</th>
-                                        <th style="width: 15%;">Date Expédition</th>
-                                        <th class="text-center" style="width: 10%;">Quantité</th>
-                                        <th style="width: 20%;">Notes</th>
-                                        <th class="text-center" style="width: 10%;">Statut</th>
+                                        <th>Produit (Nom / Code)</th>
+                                        <th>Code Agence</th>
+                                        <th>Date Expédition</th>
+                                        <th>Quantité</th>
+                                        <th>Notes</th>
+                                        <th>Statut</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <?php
                                     // Query to get shipments with status 'Delivered' from tbl_product_shipment only
+                                    // On utilise toutes les colonnes car product_name et product_code sont inclus
                                     $sql_ship = "SELECT * FROM tbl_product_shipment WHERE delivery_status = 'Delivered'";
 
                                     // Optional: Filter by specific shop if logged in user is bound to a shop
@@ -226,20 +228,20 @@ if (isset($_POST['accept_shipments_ajax'])) {
                                         while ($row = $stmt_ship->fetch(PDO::FETCH_ASSOC)) {
                                     ?>
                                             <tr>
-                                                <td class="text-center" style="width: 30px; vertical-align: middle;">
+                                                <td class="text-center" style="vertical-align: middle;">
                                                     <input type="checkbox" name="shipment_ids[]" class="chk_shipment" value="<?php echo $row['shipment_id']; ?>">
                                                 </td>
-                                                <td style="width: 30%; vertical-align: middle;">
+                                                <td>
                                                     <strong><?php echo htmlspecialchars($row['product_name']); ?></strong><br>
                                                     <small class="text-muted">Code: <?php echo htmlspecialchars($row['product_code']); ?></small>
                                                 </td>
-                                                <td style="width: 15%; vertical-align: middle;"><?php echo htmlspecialchars($row['code_agence']); ?></td>
-                                                <td style="width: 15%; vertical-align: middle;"><?php echo date('d-m-Y', strtotime($row['shipment_date'])); ?></td>
-                                                <td class="text-bold text-success text-center" style="font-size: 1.2em; width: 10%; vertical-align: middle;">
+                                                <td><?php echo htmlspecialchars($row['code_agence']); ?></td>
+                                                <td><?php echo date('d-m-Y', strtotime($row['shipment_date'])); ?></td>
+                                                <td class="text-bold text-success" style="font-size: 1.2em;">
                                                     <?php echo htmlspecialchars($row['shipped_quantity']); ?>
                                                 </td>
-                                                <td style="width: 20%; vertical-align: middle;"><small><i><?php echo htmlspecialchars($row['notes']); ?></i></small></td>
-                                                <td class="text-center" style="width: 10%; vertical-align: middle;">
+                                                <td><small><i><?php echo htmlspecialchars($row['notes']); ?></i></small></td>
+                                                <td>
                                                     <span class="label label-warning"><?php echo htmlspecialchars($row['delivery_status']); ?></span>
                                                 </td>
                                             </tr>
@@ -259,7 +261,7 @@ if (isset($_POST['accept_shipments_ajax'])) {
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-default pull-left" data-dismiss="modal">Fermer</button>
-                        <button type="button" id="submitAcceptShipments" class="btn btn-success btn-flat">
+                        <button type="submit" name="accept_shipments" class="btn btn-success btn-flat">
                             <i class="fa fa-check-circle"></i> Accepter la Sélection
                         </button>
                     </div>
@@ -299,7 +301,6 @@ if (isset($_POST['accept_shipments_ajax'])) {
                         "scrollCollapse": true
                     });
                 } else {
-                    // Si elle est déjà initialisée, récupérez l'instance existante
                     shipmentTable = $('#shipmentTable').DataTable();
                 }
             }
@@ -309,7 +310,7 @@ if (isset($_POST['accept_shipments_ajax'])) {
                 return;
             }
 
-            // --- 2. LOGIQUE DE SÉLECTION (Corrigée pour fonctionner avec DataTables) ---
+            // --- 2. LOGIQUE DE SÉLECTION (Corrigée et Robuste) ---
 
             // Gestion du clic sur la case 'selectAll'
             $('#selectAll').off('click').on('click', function() {
@@ -336,9 +337,7 @@ if (isset($_POST['accept_shipments_ajax'])) {
             // Réinitialisation lors de l'ouverture du modal
             $('#receiveStockModal').on('shown.bs.modal', function() {
                 $('#selectAll').prop('checked', false);
-                // Décoche toutes les lignes
                 shipmentTable.rows().nodes().to$().find('.chk_shipment').prop('checked', false);
-                // Ajuste les colonnes pour l'alignement dans le modal
                 shipmentTable.columns.adjust().draw();
             });
 
@@ -379,18 +378,42 @@ if (isset($_POST['accept_shipments_ajax'])) {
                     success: function(response) {
                         swal.close(); // Fermer le swal de chargement
 
-                        // Fermer le modal
-                        $('#receiveStockModal').modal('hide');
-
-                        swal("Opération Terminée", response.message, response.status);
-
-                        // Si le succès est total ou partiel, on rafraîchit la page
-                        // pour garantir que les tables affichent les données correctes (y compris l'historique)
                         if (response.status === 'success' || response.status === 'warning') {
-                            setTimeout(function() {
-                                // Recharge la page après 1.5s pour voir les mises à jour
-                                window.location.reload();
-                            }, 1500);
+
+                            // Fermer le modal
+                            $('#receiveStockModal').modal('hide');
+
+                            // Afficher le message de succès/avertissement
+                            swal("Opération Terminée", response.message, response.status);
+
+                            // IMPORTANT : Recharger les données des tables
+                            // Vous devrez implémenter ici la logique pour recharger les données dans les tables
+                            // Cela peut nécessiter une fonction PHP pour générer le contenu HTML des deux tables.
+
+                            // Solution Temporaire (Recharger la page est l'alternative la plus simple sans endpoint AJAX dédié)
+                            // Cependant, si vous voulez VRAIMENT éviter le rechargement:
+
+                            // Méthode propre (mais nécessite un endpoint PHP pour les données) :
+                            // 1. Appeler une fonction AJAX pour récupérer les NOUVELLES données HTML/JSON pour les deux tables.
+                            // 2. Clear la DataTable existante (shipmentTable.clear().draw(); historyTable.clear().draw();)
+                            // 3. Ajouter les nouvelles données (shipmentTable.rows.add(newData).draw(); etc.)
+
+                            // --- Démonstration de l'alternative simple (Recharge AJAX du contenu des tables) ---
+                            // Ceci suppose que votre fichier PHP est capable de rendre les lignes de la table séparément.
+
+                            // *** OPTION RECOMMANDÉE SI VOUS VOULEZ VRAIMENT ÉVITER LE RELOAD ***
+                            // Pour cet exemple, je vais simuler un rechargement en utilisant window.location.reload()
+                            // car la mise à jour propre des DataTables sans endpoint JSON est trop complexe.
+
+                            // Si le succès est total, on rafraîchit
+                            if (response.status === 'success') {
+                                setTimeout(function() {
+                                    window.location.reload();
+                                }, 1500); // Recharge la page après 1.5s
+                            }
+
+                        } else {
+                            swal("Erreur", response.message, "error");
                         }
                     },
                     error: function(xhr, status, error) {
@@ -400,5 +423,6 @@ if (isset($_POST['accept_shipments_ajax'])) {
                     }
                 });
             });
+            // FIN AJAX
         });
     </script>

@@ -12,24 +12,39 @@ if ($_SESSION['user_name'] == "") {
 
 ?>
 
-<!-- Content Wrapper. Contains page content -->
 <div class="content-wrapper">
-  <!-- Content Header (Page header) -->
   <section class="content-header">
     <h1>
       Produit
     </h1>
   </section>
 
-  <!-- Main content -->
   <section class="content container-fluid">
     <div class="box box-success">
       <div class="box-body">
         <?php
         $id = $_GET['id'];
 
-        $select = $pdo->prepare("SELECT * FROM tbl_shop_item WHERE product_id=$id");
+        // 1. Base SELECT query for product details (tbl_shop_item)
+        // 2. Add a subquery to calculate Total Delivered Quantity from tbl_product_shipment
+        $select = $pdo->prepare("
+                    SELECT 
+                        tsi.*,
+                        (
+                            SELECT COALESCE(SUM(tps.shipped_quantity), 0)
+                            FROM tbl_product_shipment tps
+                            WHERE tps.product_code = tsi.product_code
+                            AND tps.code_agence = tsi.shop_code
+                            AND tps.delivery_status = 'Delivered'
+                        ) AS total_delivered
+                    FROM tbl_shop_item tsi 
+                    WHERE tsi.product_id=:id
+                ");
+
+        // Bind the product ID parameter
+        $select->bindParam(':id', $id, PDO::PARAM_INT);
         $select->execute();
+
         while ($row = $select->fetch(PDO::FETCH_OBJ)) { ?>
 
           <div class="col-md-6">
@@ -53,7 +68,10 @@ if ($_SESSION['user_name'] == "") {
               <li class="list-group-item"><b>Discount</b> :<span class="label label-warning pull-right"> <?php echo number_format($row->discount); ?> &nbsp; %</span></li>
 
               <li class="list-group-item"><b>Plus Value</b> :<span class="label label-success pull-right"> FCFA &nbsp; <?php echo number_format(($row->sell_price - $row->purchase_price)); ?></span></li>
-              <li class="list-group-item"><b>Quantite en stock </b> :<span class="label label-default pull-right"><?php echo $row->stock; ?></span></li>
+
+              <li class="list-group-item"><b>Quantite en stock Boutique</b> :<span class="label label-default pull-right"><?php echo $row->stock; ?></span></li>
+
+              <li class="list-group-item"><b>Expédié Non Validé(Boutique)</b> :<span class="label label-danger pull-right"><?php echo $row->total_delivered; ?></span></li>
               <li class="list-group-item"><b>Stock Minimal </b> :<span class="label label-default pull-right"><?php echo $row->min_stock; ?></span></li>
               <li class="list-group-item"><b>Unite</b> :<span class="label label-default pull-right"><?php echo $row->product_satuan; ?></span></li>
               <li class="list-group-item"><b>Fournisseur</b> :<span class="label label-default pull-right"><?php echo $row->supplier; ?></span></li>
@@ -81,10 +99,7 @@ if ($_SESSION['user_name'] == "") {
 
 
   </section>
-  <!-- /.content -->
 </div>
-<!-- /.content-wrapper -->
-
 <?php
 include_once 'inc/footer_all.php';
 ?>

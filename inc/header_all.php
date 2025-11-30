@@ -221,7 +221,7 @@
           <?php } ?>
           <li><a href="report_sales.php"><i class="fa fa-newspaper-o"></i> <span>Stats</span></a></li>
           <li><a href="./product_shop_item.php"><i class="fa fa-archive"></i> <span>Produits En Boutique</span></a></li>
-          <li><a href="./edit_stock_shop_validation.php"><i class="fa fa-archive"></i> <span>Validation Produits Boutique</span></a></li>
+
 
           <?php //if($_SESSION["role"]=="Admin"){ 
           ?>
