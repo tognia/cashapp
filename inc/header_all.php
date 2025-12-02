@@ -217,7 +217,7 @@
           <li><a href="dashboard.php"><i class="fa fa-dashboard"></i> <span>Accueil</span></a></li>
           <li><a href="./order.php"><i class="fa fa-shopping-cart"></i> <span>Operations Caisse</span></a></li>
           <?php if ($_SESSION["role"] == "Admin") { ?>
-            <li><a href="./orderclient.php"><i class="fa fa-shopping-cart"></i> <span>Commandes Clients</span></a></li>
+            <!-- <li><a href="./orderclient.php"><i class="fa fa-shopping-cart"></i> <span>Commandes Clients</span></a></li> -->
           <?php } ?>
           <li><a href="report_sales.php"><i class="fa fa-newspaper-o"></i> <span>Stats</span></a></li>
           <li><a href="./product_shop_item.php"><i class="fa fa-archive"></i> <span>Produits En Boutique</span></a></li>
