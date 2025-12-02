@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Hôte : 127.0.0.1:3306
--- Généré le :  Dim 30 nov. 2025 à 17:29
+-- Généré le :  mar. 02 déc. 2025 à 21:37
 -- Version du serveur :  5.7.26
 -- Version de PHP :  7.2.18
 
@@ -361,64 +361,6 @@ CREATE TABLE IF NOT EXISTS `order_details` (
   PRIMARY KEY (`order_details_id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=106 DEFAULT CHARSET=latin1;
 
---
--- Déchargement des données de la table `order_details`
---
-
-INSERT INTO `order_details` (`order_details_id`, `prod_id`, `prod_qty`, `total_qty`, `total`, `user_id`, `order_id`) VALUES
-(53, 13, 1, '338', '434.00', 6, '1'),
-(54, 13, 3, '335', '1302.00', 6, '1'),
-(55, 13, 1, '334', '434.00', 6, '1'),
-(56, 11, 1, '149', '125.00', 6, '1'),
-(57, 12, 1, '397', '155.00', 6, '1'),
-(58, 11, 1, '149', '125.00', 6, '1'),
-(59, 13, 1, '329', '434.00', 6, '1'),
-(60, 13, 1, '328', '434.00', 6, '1'),
-(61, 13, 1, '327', '434.00', 6, '1'),
-(62, 12, 2, '395', '310.00', 6, '1'),
-(63, 13, 2, '325', '868.00', 6, '1'),
-(64, 13, 1, '324', '434.00', 6, '1'),
-(65, 11, 1, '148', '125.00', 6, '1'),
-(66, 13, 1, '323', '434.00', 6, '1'),
-(67, 11, 1, '147', '125.00', 6, '1'),
-(68, 12, 1, '394', '155.00', 6, '1'),
-(69, 12, 1, '393', '155.00', 6, '1'),
-(70, 13, 1, '322', '434.00', 7, '1'),
-(71, 11, 1, '146', '125.00', 7, '1'),
-(72, 13, 1, '321', '434.00', 7, '1'),
-(73, 13, 1, '320', '434.00', 7, '1'),
-(74, 13, 1, '319', '434.00', 7, '1'),
-(75, 13, 1, '318', '434.00', 6, '1'),
-(76, 13, 3, '315', '1302.00', 6, '1'),
-(77, 13, 1, '314', '434.00', 6, '1'),
-(78, 13, 1, '313', '434.00', 6, '1'),
-(79, 14, 1, '233', '760.00', 6, '1'),
-(80, 13, 1, '311', '434.00', 6, '1'),
-(81, 13, 2, '309', '868.00', 6, '1'),
-(83, 14, 1, '233', '760.00', 6, '1'),
-(84, 13, 1, '308', '434.00', 6, '1'),
-(85, 15, 1, '455', '455.00', 6, '1'),
-(86, 11, 1, '145', '125.00', 6, '1'),
-(87, 13, 1, '306', '434.00', 6, '1'),
-(88, 13, 1, '304', '434.00', 6, '1'),
-(89, 13, 1, '303', '434.00', 6, '1'),
-(90, 13, 1, '302', '434.00', 6, '1'),
-(91, 14, 1, '232', '760.00', 6, '1'),
-(92, 13, 1, '300', '434.00', 6, '1'),
-(93, 14, 10, '222', '7600.00', 8, '1'),
-(94, 13, 200, '0', '86800.00', 8, '1'),
-(95, 13, 300, '0', '130200.00', 8, '1'),
-(96, 11, 1, '144', '125.00', 6, '1'),
-(97, 11, 144, '0', '18000.00', 6, '1'),
-(98, 15, 1, '', '455.00', 5, ''),
-(99, 15, 1, '', '455.00', 6, ''),
-(100, 16, 1, '', '1500.00', 6, ''),
-(101, 12, 1, '392', '155.00', 8, '1'),
-(102, 12, 1, '391', '155.00', 8, '1'),
-(103, 15, 1, '', '455.00', 8, ''),
-(104, 14, 1, '221', '760.00', 9, '1'),
-(105, 17, 1, '25', '2200.00', 9, '1');
-
 -- --------------------------------------------------------
 
 --
@@ -684,7 +626,19 @@ CREATE TABLE IF NOT EXISTS `tbl_invoice` (
   `tva` float NOT NULL,
   `payment_mode` varchar(50) NOT NULL,
   PRIMARY KEY (`invoice_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=138 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=150 DEFAULT CHARSET=latin1;
+
+--
+-- Déchargement des données de la table `tbl_invoice`
+--
+
+INSERT INTO `tbl_invoice` (`invoice_id`, `cashier_name`, `id_client`, `order_date`, `time_order`, `total`, `paid`, `due`, `remise`, `tva`, `payment_mode`) VALUES
+(144, 'operator2', 'common', '2025-12-02', '21:20:00', 9540, 10000, 460, 0, 1540, 'especes'),
+(145, 'operator2', 'common', '2025-12-02', '21:43:00', 126405, 130, -126275, 0, 20405, 'especes'),
+(146, 'operator2', 'common', '2025-12-02', '22:02:00', 47700, 25000, -22700, 0, 7700, 'especes'),
+(147, 'operator2', 'common', '2025-12-02', '22:25:00', 5962.5, 3000, -2962.5, 0, 962.5, 'especes'),
+(148, 'operator2', 'common', '2025-12-02', '22:26:00', 17887.5, 10000, -7887.5, 0, 2887.5, 'especes'),
+(149, 'operator2', 'common', '2025-12-02', '22:34:00', 5962.5, 2500, -3462.5, 0, 962.5, 'especes');
 
 -- --------------------------------------------------------
 
@@ -788,7 +742,21 @@ CREATE TABLE IF NOT EXISTS `tbl_invoice_detail` (
   `order_date` date NOT NULL,
   `remise` float NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=133 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=148 DEFAULT CHARSET=latin1;
+
+--
+-- Déchargement des données de la table `tbl_invoice_detail`
+--
+
+INSERT INTO `tbl_invoice_detail` (`id`, `invoice_id`, `product_id`, `product_code`, `product_name`, `qty`, `product_satuan`, `price`, `total`, `order_date`, `remise`) VALUES
+(140, 144, 91, 'CA000233', 'ZOBAZO', 1, 'U', 5000, 5000, '2025-12-02', 0),
+(141, 144, 92, 'PAO12345', 'POTATO', 1, 'U', 3000, 3000, '2025-12-02', 0),
+(142, 145, 91, 'CA000233', 'ZOBAZO', 5, 'U', 5000, 25000, '2025-12-02', 0),
+(143, 145, 92, 'PAO12345', 'POTATO', 27, 'U', 3000, 81000, '2025-12-02', 0),
+(144, 146, 91, 'CA000233', 'ZOBAZO', 8, 'U', 5000, 40000, '2025-12-02', 0),
+(145, 147, 91, 'CA000233', 'ZOBAZO', 1, 'U', 5000, 5000, '2025-12-02', 0),
+(146, 148, 91, 'CA000233', 'ZOBAZO', 3, 'U', 5000, 15000, '2025-12-02', 0),
+(147, 149, 91, 'CA000233', 'ZOBAZO', 1, 'U', 5000, 5000, '2025-12-02', 0);
 
 -- --------------------------------------------------------
 
@@ -883,8 +851,8 @@ CREATE TABLE IF NOT EXISTS `tbl_product` (
 --
 
 INSERT INTO `tbl_product` (`product_id`, `product_code`, `product_sku`, `product_name`, `product_category`, `product_brand`, `supplier`, `purchase_price`, `sell_price`, `min_price`, `discount`, `stock`, `min_stock`, `product_satuan`, `description`, `place_in_storeroom`, `place_in_store`, `img`) VALUES
-(35, 'CA000233', '002CA000233', 'ZOBAZO', 'Accessoires et autre appareillage terminal', 'oko', 'OKOK chaud Manioc', 2500, 5000, 4000, 0, 0, 5, 'U', 'CA000233CA000233CA000233', 'RAS', 'RAS', '691ea6088d957.jpg'),
-(36, 'PAO12345', 'PAO123450001', 'POTATO', 'Accessoires et autre appareillage terminal', 'BOUF', 'OKOK chaud Manioc', 1500, 3000, 2500, 0, 2, 10, 'U', 'POTATO BOUF', 'RAS', 'RAS', '692b284821d47.jpg');
+(35, 'CA000233', '002CA000233', 'ZOBAZO', 'Accessoires et autre appareillage terminal', 'oko', 'OKOK chaud Manioc', 2500, 5000, 4000, 0, 200, 5, 'U', 'CA000233CA000233CA000233', 'RAS', 'RAS', '691ea6088d957.jpg'),
+(36, 'PAO12345', 'PAO123450001', 'POTATO', 'Accessoires et autre appareillage terminal', 'BOUF', 'OKOK chaud Manioc', 1500, 3000, 2500, 0, 100, 10, 'U', 'POTATO BOUF', 'RAS', 'RAS', '692b284821d47.jpg');
 
 -- --------------------------------------------------------
 
@@ -908,7 +876,7 @@ CREATE TABLE IF NOT EXISTS `tbl_product_receipt` (
   PRIMARY KEY (`receipt_id`),
   KEY `fk_product_id` (`product_id`),
   KEY `fk_user_id` (`user_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=latin1;
 
 --
 -- Déchargement des données de la table `tbl_product_receipt`
@@ -920,7 +888,9 @@ INSERT INTO `tbl_product_receipt` (`receipt_id`, `receipt_date`, `product_id`, `
 (3, '2025-11-26', 35, '', '', '', 49, 'OKOK chaud Manioc', 2500.00, 17, NULL),
 (4, '2025-11-26', 35, '', '', '', 1, 'OKOK chaud Manioc', 2500.00, 17, NULL),
 (5, '2025-11-29', 35, 'CA000233', '002CA000233', 'ZOBAZO', 60, 'OKOK chaud Manioc', 2500.00, 17, NULL),
-(6, '2025-11-29', 35, 'CA000233', '002CA000233', 'ZOBAZO', 50, 'OKOK chaud Manioc', 2500.00, 17, NULL);
+(6, '2025-11-29', 35, 'CA000233', '002CA000233', 'ZOBAZO', 50, 'OKOK chaud Manioc', 2500.00, 17, NULL),
+(7, '2025-12-02', 36, 'PAO12345', 'PAO123450001', 'POTATO', 98, 'OKOK chaud Manioc', 1500.00, 20, NULL),
+(8, '2025-12-02', 35, 'CA000233', '002CA000233', 'ZOBAZO', 200, 'OKOK chaud Manioc', 2500.00, 20, NULL);
 
 -- --------------------------------------------------------
 
@@ -1042,8 +1012,8 @@ CREATE TABLE IF NOT EXISTS `tbl_shop_item` (
 --
 
 INSERT INTO `tbl_shop_item` (`product_id`, `shop_code`, `product_code`, `product_sku`, `product_name`, `product_category`, `product_brand`, `supplier`, `purchase_price`, `sell_price`, `min_price`, `discount`, `stock`, `min_stock`, `product_satuan`, `description`, `place_in_store`, `img`) VALUES
-(91, 'Eleveur', 'CA000233', '002CA000233', 'ZOBAZO', 'Accessoires et autre appareillage terminal', 'oko', 'OKOK chaud Manioc', 2500, 5000, 4000, 0, 100, 0, 'U', 'CA000233CA000233CA000233', 'RAS', '691ea6088d957.jpg'),
-(92, 'Eleveur', 'PAO12345', 'PAO123450001', 'POTATO', 'Accessoires et autre appareillage terminal', 'BOUF', 'OKOK chaud Manioc', 1500, 3000, 2500, 0, 28, 0, 'U', 'POTATO BOUF', 'RAS', '692b284821d47.jpg');
+(91, 'Eleveur', 'CA000233', '002CA000233', 'ZOBAZO', 'Accessoires et autre appareillage terminal', 'oko', 'OKOK chaud Manioc', 2500, 5000, 4000, 0, 81, 0, 'U', 'CA000233CA000233CA000233', 'RAS', '691ea6088d957.jpg'),
+(92, 'Eleveur', 'PAO12345', 'PAO123450001', 'POTATO', 'Accessoires et autre appareillage terminal', 'BOUF', 'OKOK chaud Manioc', 1500, 3000, 2500, 0, 0, 0, 'U', 'POTATO BOUF', 'RAS', '692b284821d47.jpg');
 
 -- --------------------------------------------------------
 
@@ -1085,7 +1055,7 @@ CREATE TABLE IF NOT EXISTS `tbl_user` (
   `role` varchar(15) NOT NULL,
   `is_active` tinyint(4) NOT NULL,
   PRIMARY KEY (`user_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=20 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=21 DEFAULT CHARSET=latin1;
 
 --
 -- Déchargement des données de la table `tbl_user`
@@ -1095,7 +1065,8 @@ INSERT INTO `tbl_user` (`user_id`, `username`, `fullname`, `password`, `magasin`
 (6, 'tnh', 'Tognia', '7c222fb2927d828af22f592134e8932480637c0d', 'Eleveur', 'Admin', 1),
 (17, 'storekeeper', 'PEACEFULL', '7c4a8d09ca3762af61e59520943dc26494f8941b', 'Eleveur', 'storekeeper', 1),
 (18, 'operator2', 'OKO', '7c222fb2927d828af22f592134e8932480637c0d', 'Eleveur', 'Operator', 1),
-(19, 'respo', 'OBOBOGO', '7c4a8d09ca3762af61e59520943dc26494f8941b', 'Eleveur', 'Responsable', 1);
+(19, 'respo', 'OBOBOGO', '7c4a8d09ca3762af61e59520943dc26494f8941b', 'Eleveur', 'Responsable', 1),
+(20, 'admin', 'BOULANGERIE ELEVEUR', '7c4a8d09ca3762af61e59520943dc26494f8941b', 'Eleveur', 'Admin', 1);
 
 -- --------------------------------------------------------
 

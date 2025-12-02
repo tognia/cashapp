@@ -19,54 +19,25 @@ error_reporting(0);
 date_default_timezone_set('Africa/Douala');
 $shop = $_SESSION['magasin'];
 
-// --- Fonctions utilitaires (peuvent être conservées, mais non utilisées directement dans la nouvelle logique JS) ---
-
-function fill_product($pdo)
-{
-  $output = '';
-  $s = $_SESSION['magasin'];
-  $req = "SELECT * FROM tbl_shop_item WHERE shop_code = ?";
-  $select = $pdo->prepare($req);
-  $select->execute([$s]);
-  $result = $select->fetchAll();
-
-  foreach ($result as $row) {
-    $output .= '<option value="' . $row['product_id'] . '">' . $row["product_name"] . '_' . $row["product_code"] . '</option>';
-  }
-  return $output;
-}
-
-function fill_client($pdo)
-{
-  $output = '';
-  $select = $pdo->prepare("SELECT * FROM users ORDER BY username");
-  $select->execute();
-  $result = $select->fetchAll();
-
-  foreach ($result as $row) {
-    $output .= '<option value="' . $row['username'] . '">' . $row["firstname"] . ' ' . $row["middlename"] . ' ' . $row["lastname"] . '</option>';
-  }
-  return $output;
-}
-
 // --- Initialisation des tableaux d'alerte (Stock Min) ---
+// (Conservée pour la gestion des alertes après une vente réussie)
 $_SESSION['tab_alert'] = array();
 $_SESSION['tab_alert']['id'] = array();
 $_SESSION['tab_alert']['code'] = array();
 $_SESSION['tab_alert']['name'] = array();
 $_SESSION['tab_alert']['stock'] = array();
 $_SESSION['tab_alert']['stock_min'] = array();
-$j = 0;
 $_SESSION['count_alert'] = 0;
 
-// --- Logique de Sauvegarde de la Commande ---
+
+// --- Logique de Sauvegarde de la Commande (Validation Critique Côté Serveur) ---
 if (isset($_POST['save_order'])) {
 
   // Récupération des données du formulaire
   $cashier_name = $_POST['cashier_name'];
   $id_client = $_POST['client'];
   $order_date = date("Y-m-d", strtotime($_POST['orderdate']));
-  $order_time = date("H:i:s", strtotime($_POST['timeorder'])); // Ajout des secondes pour précision
+  $order_time = date("H:i:s", strtotime($_POST['timeorder']));
 
   // Totaux calculés
   $total = $_POST['total'];      // Total TTC
@@ -76,11 +47,11 @@ if (isset($_POST['save_order'])) {
   $tva = $_POST['tva'];
   $payment_mode = $_POST['payment_mode'];
 
-  // Détails des produits
+  // Détails des produits commandés
   $arr_product_id = $_POST['productid'];
   $arr_product_code = $_POST['productcode'];
   $arr_product_name = $_POST['productname'];
-  $arr_product_stock = $_POST['productstock'];
+  $arr_product_stock = $_POST['productstock']; // NOTE: Stock affiché (non fiable pour la validation)
   $arr_product_stockmin = $_POST['minstock'];
   $arr_product_qty = $_POST['quantity'];
   $arr_product_satuan = $_POST['productsatuan'];
@@ -89,152 +60,168 @@ if (isset($_POST['save_order'])) {
   $arr_product_remise = $_POST['productremise'];
   $arr_product_total = $_POST['producttotal'];
 
-  if ($paid < $total) {
-    $has_error = true;
-    // On ne devrait pas arriver ici si le JS fonctionne
-    echo '<script type="text/javascript">
-                jQuery(function validation(){
-                    swal("Warning", "Montant Payé Erroné !!!!!", "warning", {
-                        button: "Continue",
-                    });
-                     return false;
-                });
-                </script>';
-    throw new Exception("Montant Payé Erroné " . $paid);
+  // Filtrer les lignes vides (où la quantité est 0 ou non définie)
+  $valid_products = [];
+  $has_product = false;
+  for ($i = 0; $i < count($arr_product_id); $i++) {
+    $qty = intval($arr_product_qty[$i]);
+    if ($qty > 0) {
+      $has_product = true;
+      $valid_products[] = [
+        'id' => $arr_product_id[$i],
+        'code' => $arr_product_code[$i],
+        'name' => $arr_product_name[$i],
+        'stock' => $arr_product_stock[$i],
+        'minstock' => $arr_product_stockmin[$i],
+        'qty' => $qty,
+        'satuan' => $arr_product_satuan[$i],
+        'price' => $arr_product_price[$i],
+        'min_price' => $arr_product_min[$i],
+        'remise' => $arr_product_remise[$i],
+        'total' => $arr_product_total[$i],
+      ];
+    }
   }
 
-  // Vérification minimale
-  if (empty($arr_product_id) || array_sum($arr_product_qty) == 0) {
+  if (!$has_product) {
     echo '<script type="text/javascript">
                 jQuery(function validation(){
                     swal("Warning", "Veuillez ajouter des produits à la transaction.", "warning", {
                         button: "Continue",
                     });
-                   
                 });
                 </script>';
-  } else {
-    try {
+    return; // Sortir si aucun produit valide
+  }
 
+  try {
+    // --- Étape 1 : Début de la transaction ---
+    $pdo->beginTransaction();
 
-      // Début de la transaction
-      $pdo->beginTransaction();
+    // --- Étape 2 : Vérification du stock réel et du prix minimum (Côté Serveur) ---
+    $alert_products = [];
+    foreach ($valid_products as $item) {
+      $product_id = $item['id'];
+      $requested_qty = $item['qty'];
+      $min_price = $item['min_price'];
+      $sold_price = $item['price'];
 
-      // 1. Insertion de la facture principale
-      $insert_invoice = $pdo->prepare("INSERT INTO tbl_invoice(cashier_name, id_client, order_date, time_order, total, paid, due, remise, tva, payment_mode)
-                                             VALUES(:name, :id_client, :orderdate, :timeorder, :total, :paid, :due, :remise, :tva, :payment_mode)");
+      // a) Récupération du stock réel actuel depuis la DB
+      $stmt_stock = $pdo->prepare("SELECT stock FROM tbl_shop_item WHERE shop_code = :shop AND product_id = :id FOR UPDATE"); // FOR UPDATE verrouille la ligne
+      $stmt_stock->bindParam(':shop', $shop);
+      $stmt_stock->bindParam(':id', $product_id);
+      $stmt_stock->execute();
+      $current_stock_db = $stmt_stock->fetchColumn();
 
-      $insert_invoice->bindParam(':name', $cashier_name);
-      $insert_invoice->bindParam(':id_client', $id_client);
-      $insert_invoice->bindParam(':orderdate', $order_date);
-      $insert_invoice->bindParam(':timeorder', $order_time);
-      $insert_invoice->bindParam(':total', $total);
-      $insert_invoice->bindParam(':paid', $paid);
-      $insert_invoice->bindParam(':due', $due);
-      $insert_invoice->bindParam(':remise', $remise);
-      $insert_invoice->bindParam(':tva', $tva);
-      $insert_invoice->bindParam(':payment_mode', $payment_mode);
-      $insert_invoice->execute();
-
-      $invoice_id = $pdo->lastInsertId();
-
-      if ($invoice_id) {
-        $has_error = false;
-        $alert_products = []; // Pour stocker les produits en alerte
-
-        // 2. Traitement des détails de la facture et mise à jour du stock
-        for ($i = 0; $i < count($arr_product_id); $i++) {
-
-          $product_id = $arr_product_id[$i];
-          $qty_sold = $arr_product_qty[$i];
-          $current_stock = $arr_product_stock[$i];
-          $min_stock = $arr_product_stockmin[$i];
-          $price_sold = $arr_product_price[$i];
-          $min_price = $arr_product_min[$i];
-
-          // Calculs
-          $rem_qty = $current_stock - $qty_sold; // Nouveau stock restant
-          $diff_price = $price_sold - $min_price; // Différence prix vendu et prix min
-          $reste_stock_min = $rem_qty - $min_stock; // Écart avec le stock min
-
-          // --- Vérifications (Ces alertes devraient idéalement être gérées en JS avant soumission) ---
-          // if ($qty_sold > $current_stock) {
-          //   $has_error = true;
-          //   // On ne devrait pas arriver ici si le JS fonctionne
-          //   throw new Exception("Stock insuffisant pour le produit " . $arr_product_code[$i]);
-          // }
-          if ($diff_price < 0) {
-            $has_error = true;
-            // On ne devrait pas arriver ici si le JS fonctionne
-            throw new Exception("Prix de vente inférieur au prix minimum pour " . $arr_product_code[$i]);
-          }
-          // -----------------------------------------------------------------------------------------
-
-          // Mise à jour du stock
-          $update_stock = $pdo->prepare("UPDATE tbl_shop_item SET stock = :new_stock WHERE shop_code = :shop AND product_id = :id");
-          $update_stock->bindParam(':new_stock', $rem_qty);
-          $update_stock->bindParam(':shop', $shop);
-          $update_stock->bindParam(':id', $product_id);
-          $update_stock->execute();
-
-          // Insertion du détail de la facture
-          $insert_detail = $pdo->prepare("INSERT INTO tbl_invoice_detail(invoice_id, product_id, product_code, product_name, qty, product_satuan, price, total, order_date, remise)
-                                                    VALUES(:invid, :productid, :productcode, :productname, :qty, :productsatuan, :price, :total, :orderdate, :remise)");
-
-          $insert_detail->bindParam(':invid', $invoice_id);
-          $insert_detail->bindParam(':productid', $product_id);
-          $insert_detail->bindParam(':productcode', $arr_product_code[$i]);
-          $insert_detail->bindParam(':productname', $arr_product_name[$i]);
-          $insert_detail->bindParam(':qty', $qty_sold);
-          $insert_detail->bindParam(':productsatuan', $arr_product_satuan[$i]);
-          $insert_detail->bindParam(':price', $price_sold);
-          $insert_detail->bindParam(':total', $arr_product_total[$i]);
-          $insert_detail->bindParam(':orderdate', $order_date);
-          $insert_detail->bindParam(':remise', $arr_product_remise[$i]);
-          $insert_detail->execute();
-
-          // Gestion de l'alerte stock (si le stock atteint ou passe sous le seuil min)
-          if ($reste_stock_min <= 0) {
-            $alert_products[] = [
-              'id' => $product_id,
-              'code' => $arr_product_code[$i],
-              'name' => $arr_product_name[$i],
-              'stock' => $rem_qty,
-              'stock_min' => $min_stock
-            ];
-          }
-        }
-
-        // Mettre à jour la session d'alerte après le succès de la transaction
-        foreach ($alert_products as $prod) {
-          array_push($_SESSION['tab_alert']['id'], $prod['id']);
-          array_push($_SESSION['tab_alert']['code'], $prod['code']);
-          array_push($_SESSION['tab_alert']['name'], $prod['name']);
-          array_push($_SESSION['tab_alert']['stock'], $prod['stock']);
-          array_push($_SESSION['tab_alert']['stock_min'], $prod['stock_min']);
-        }
-        $_SESSION['count_alert'] = count($_SESSION['tab_alert']['id']);
-
-
-        // Valider la transaction
-        $pdo->commit();
-
-        // Redirection après succès (peut-être vers la page d'impression de reçu)
-        // Note: La redirection en JS permet de ne pas resoumettre le formulaire
-        $_SESSION['invoice_id_to_print'] = $invoice_id; // Stocker l'ID pour l'impression
-        echo '<script>
-                    swal("Success", "Opération enregistrée avec succès. Facture #' . $invoice_id . '", "success").then(() => {
-                        window.location.href="order.php"; // Ou à la page d\'impression/vue
-                    });
-                </script>';
-      } else {
-        $pdo->rollBack();
-        echo '<script>swal("Error", "Échec de l\'insertion de la facture.", "error");</script>';
+      if ($current_stock_db === false) {
+        throw new Exception("Produit ID $product_id introuvable dans ce magasin.");
       }
-    } catch (Exception $e) {
-      $pdo->rollBack();
-      echo '<script>swal("Error", "Erreur lors de l\'enregistrement : ' . $e->getMessage() . '", "error");</script>';
+
+      // b) Vérification de survente
+      if ($requested_qty > $current_stock_db) {
+        throw new Exception("Stock Insuffisant pour le produit " . $item['name'] . " (Demandé: $requested_qty, Disponible: $current_stock_db).");
+      }
+
+      // c) Vérification du prix minimum
+      if ($sold_price < $min_price) {
+        throw new Exception("Prix de vente inférieur au prix minimum pour " . $item['name'] . " (Min: $min_price, Vendu: $sold_price).");
+      }
     }
+
+    // --- Étape 3 : Insertion de la facture principale (après validation) ---
+    $insert_invoice = $pdo->prepare("INSERT INTO tbl_invoice(cashier_name, id_client, order_date, time_order, total, paid, due, remise, tva, payment_mode)
+                                         VALUES(:name, :id_client, :orderdate, :timeorder, :total, :paid, :due, :remise, :tva, :payment_mode)");
+
+    $insert_invoice->bindParam(':name', $cashier_name);
+    $insert_invoice->bindParam(':id_client', $id_client);
+    $insert_invoice->bindParam(':orderdate', $order_date);
+    $insert_invoice->bindParam(':timeorder', $order_time);
+    $insert_invoice->bindParam(':total', $total);
+    $insert_invoice->bindParam(':paid', $paid);
+    $insert_invoice->bindParam(':due', $due);
+    $insert_invoice->bindParam(':remise', $remise);
+    $insert_invoice->bindParam(':tva', $tva);
+    $insert_invoice->bindParam(':payment_mode', $payment_mode);
+    $insert_invoice->execute();
+
+    $invoice_id = $pdo->lastInsertId();
+
+    if (!$invoice_id) {
+      throw new Exception("Échec de l'insertion de la facture principale.");
+    }
+
+    // --- Étape 4 : Insertion des détails et Mise à jour du stock ---
+    foreach ($valid_products as $item) {
+      $product_id = $item['id'];
+      $qty_sold = $item['qty'];
+      $min_stock = $item['minstock'];
+
+      // Mise à jour du stock (Décrémentation)
+      // Utiliser une décrémentation directe pour plus de fiabilité
+      $update_stock = $pdo->prepare("UPDATE tbl_shop_item SET stock = stock - :qty WHERE shop_code = :shop AND product_id = :id");
+      $update_stock->bindParam(':qty', $qty_sold);
+      $update_stock->bindParam(':shop', $shop);
+      $update_stock->bindParam(':id', $product_id);
+      $update_stock->execute();
+
+      // Re-vérifier le stock après décrémentation pour l'alerte (moins critique ici)
+      $new_stock_query = $pdo->prepare("SELECT stock FROM tbl_shop_item WHERE product_id = :id");
+      $new_stock_query->bindParam(':id', $product_id);
+      $new_stock_query->execute();
+      $new_stock = $new_stock_query->fetchColumn();
+
+      // Insertion du détail de la facture
+      $insert_detail = $pdo->prepare("INSERT INTO tbl_invoice_detail(invoice_id, product_id, product_code, product_name, qty, product_satuan, price, total, order_date, remise)
+                                            VALUES(:invid, :productid, :productcode, :productname, :qty, :productsatuan, :price, :total, :orderdate, :remise)");
+
+      $insert_detail->bindParam(':invid', $invoice_id);
+      $insert_detail->bindParam(':productid', $product_id);
+      $insert_detail->bindParam(':productcode', $item['code']);
+      $insert_detail->bindParam(':productname', $item['name']);
+      $insert_detail->bindParam(':qty', $qty_sold);
+      $insert_detail->bindParam(':productsatuan', $item['satuan']);
+      $insert_detail->bindParam(':price', $item['price']);
+      $insert_detail->bindParam(':total', $item['total']);
+      $insert_detail->bindParam(':orderdate', $order_date);
+      $insert_detail->bindParam(':remise', $item['remise']);
+      $insert_detail->execute();
+
+      // Gestion de l'alerte stock (si le stock atteint ou passe sous le seuil min)
+      if ($new_stock <= $min_stock) {
+        $alert_products[] = [
+          'id' => $product_id,
+          'code' => $item['code'],
+          'name' => $item['name'],
+          'stock' => $new_stock,
+          'stock_min' => $min_stock
+        ];
+      }
+    }
+
+    // Mettre à jour la session d'alerte
+    foreach ($alert_products as $prod) {
+      array_push($_SESSION['tab_alert']['id'], $prod['id']);
+      array_push($_SESSION['tab_alert']['code'], $prod['code']);
+      array_push($_SESSION['tab_alert']['name'], $prod['name']);
+      array_push($_SESSION['tab_alert']['stock'], $prod['stock']);
+      array_push($_SESSION['tab_alert']['stock_min'], $prod['stock_min']);
+    }
+    $_SESSION['count_alert'] = count($_SESSION['tab_alert']['id']);
+
+
+    // --- Étape 5 : Validation de la transaction ---
+    $pdo->commit();
+
+    // Succès et redirection
+    $_SESSION['invoice_id_to_print'] = $invoice_id;
+    echo '<script>
+            swal("Success", "Opération enregistrée avec succès. Facture #' . $invoice_id . '", "success").then(() => {
+                window.location.href="order.php";
+            });
+        </script>';
+  } catch (Exception $e) {
+    $pdo->rollBack();
+    echo '<script>swal("Error", "Erreur lors de l\'enregistrement : ' . $e->getMessage() . '", "error");</script>';
   }
 }
 ?>
@@ -407,32 +394,46 @@ if (isset($_POST['save_order'])) {
     html += '<td><input type="text" class="form-control productSearch" name="productSearch[]" style="width:250px;"><div class="productDropdown" style="position: absolute; z-index: 1000; display: none; background-color: #fff; border: 1px solid #ccc; max-height: 200px; overflow-y: auto;"></div><input type="hidden" class="form-control productid" name="productid[]" value=""></td>';
 
     html += '<td><input type="text" class="form-control productcode" style="width:100px;" name="productcode[]" readonly></td>';
-    html += '<td><input type="text" class="form-control productname" style="width:220px;" name="productname[]" readonly></td>';
+    html += '<td><input type="text" class="form-control productname" style="width:200px;" name="productname[]" readonly></td>';
 
-    html += '<td><input type="text" class="form-control productstock" style="width:50px;" name="productstock[]" required readonly><input type="hidden" class="form-control minstock" style="width:50px;" name="minstock[]"></td>';
+    // Masqué sur petit écran (col-hide-sm) - NOTE: Stock affiché, non utilisé pour la validation JS
+    html += '<td class="col-hide-sm"><input type="text" class="form-control productstock" style="width:50px;" name="productstock[]" required readonly><input type="hidden" class="form-control minstock" style="width:50px;" name="minstock[]"></td>';
 
     html += '<td><input type="text" class="form-control productprice" style="width:90px;" name="productprice[]" value="0"></td>';
 
-    html += '<td><input type="text" class="form-control productmin btn btn-outline-dark" style="width:90px;" name="productmin[]" readonly></td>';
+    // Masqué sur petit écran (col-hide-sm)
+    html += '<td class="col-hide-sm"><input type="text" class="form-control productmin btn btn-outline-dark" style="width:90px;" name="productmin[]" readonly></td>';
 
     html += '<td><input type="text" class="form-control discount" style="width:40px;" name="discount[]" value="0"></td>';
 
-    html += '<td><input type="text" class="form-control remise" style="width:60px;" name="productremise[]" readonly value="0"></td>';
+    // Masqué sur petit écran (col-hide-sm)
+    html += '<td class="col-hide-sm"><input type="text" class="form-control remise" style="width:60px;" name="productremise[]" readonly value="0"></td>';
 
     html += '<td><input type="number" min="1" class="form-control quantity_product" style="width:70px;" name="quantity[]" required value="0" readonly></td>';
 
-    html += '<td><input type="text" class="form-control productsatuan" style="width:40px;" name="productsatuan[]" readonly></td>';
+    // Masqué sur petit écran (col-hide-sm)
+    html += '<td class="col-hide-sm"><input type="text" class="form-control productsatuan" style="width:40px;" name="productsatuan[]" readonly></td>';
 
     html += '<td><input type="text" class="form-control producttotal" style="width:130px;" name="producttotal[]" readonly value="0.00"></td>';
 
-    html += '<td><button type="button" name="remove" class="btn btn-danger btn-sm btn-remove" disabled><i class="fa fa-remove"></i></button></td>'
+    html += '<td style="width: 50px;"><button type="button" name="remove" class="btn btn-danger btn-sm btn-remove" disabled><i class="fa fa-remove"></i></button></td>'
     html += '</tr>';
 
     $('#myOrder tbody').append(html);
-    $('.input-row:last .productSearch').focus(); // Focus sur le nouveau champ
+    $('.input-row:last .productSearch').focus();
   }
 
-  // --- Fonction pour incrémenter la quantité d'une ligne existante ---
+  // --- Fonction pour incrémenter la quantité d'une ligne existante (CHECK DE STOCK RETIRÉ) ---
+  // function update_existing_row(tr_existante, data) {
+  //   var current_qty = parseInt(tr_existante.find(".quantity_product").val());
+  //   var new_qty = current_qty + 1;
+
+  //   // La vérification de stock est maintenant faite côté serveur
+
+  //   tr_existante.find(".quantity_product").val(new_qty).trigger('change');
+  //   tr_existante.find(".quantity_product").prop('readonly', false);
+  //   tr_existante.find(".btn-remove").prop('disabled', false);
+  // }
   function update_existing_row(tr_existante, data) {
     var current_qty = parseInt(tr_existante.find(".quantity_product").val());
     var max_stock = parseInt(tr_existante.find(".productstock").val());
@@ -474,24 +475,28 @@ if (isset($_POST['save_order'])) {
     tr.find(".productprice").val(data["sell_price"]);
     tr.find(".productmin").val(data["min_price"]);
     tr.find(".discount").val(data["discount"]);
-    tr.find(".quantity_product").val(1).prop('readonly', false); // Initialiser à 1 et rendre éditable
+    tr.find(".quantity_product").val(1).prop('readonly', false);
     tr.find(".btn-remove").prop('disabled', false);
 
     tr.find(".quantity_product").trigger('change');
 
     tr.removeClass('input-row');
-    add_new_row(); // Ajouter automatiquement une nouvelle ligne de saisie
+    add_new_row();
   }
 
 
   $(document).ready(function() {
 
-    // ✅ CORRECTION 1 : Le bouton d'ajout manuel fonctionne
+    // Ajout du CSS Responsive (à mettre dans votre feuille de style ou <head>)
+    $('head').append('<style>@media screen and (max-width: 767px) {.col-hide-sm, #myOrder thead th.col-hide-sm {display: none !important;} #myOrder {width: 100%; min-width: 600px;} #myOrder input[type="text"], #myOrder input[type="number"] {width: 100% !important; box-sizing: border-box;}}</style>');
+
+
+    // 1. Bouton d'ajout manuel
     $(document).on('click', '.btn_addOrder', function() {
       add_new_row();
     });
 
-    // 1. Gestion de la recherche (Code ou Libellé) avec autocomplétion
+    // 2. Gestion de la recherche (Code ou Libellé) avec autocomplétion
     $(document).on('keyup', '.productSearch', function() {
       var query = $(this).val();
       var tr = $(this).closest('tr');
@@ -519,7 +524,7 @@ if (isset($_POST['save_order'])) {
       });
     });
 
-    // 2. Gestion de la sélection dans le dropdown (Scan/Sélection)
+    // 3. Gestion de la sélection dans le dropdown
     $(document).on('click', '.productDropdown li', function() {
       var selected_li = $(this);
       var tr = selected_li.closest('tr');
@@ -543,10 +548,7 @@ if (isset($_POST['save_order'])) {
                 update_existing_row($(this), data);
                 already_added = true;
                 tr.remove();
-
-                // ✅ CORRECTION 2 : Ajouter la nouvelle ligne de saisie automatique
-                add_new_row();
-
+                add_new_row(); // Rajoute la ligne de saisie vide
                 return false;
               }
             });
@@ -565,25 +567,20 @@ if (isset($_POST['save_order'])) {
       })
     });
 
-    // 3. Suppression d'une ligne
+    // 4. Suppression d'une ligne
     $(document).on('click', '.btn-remove', function() {
       $(this).closest('tr').remove();
       calculate(parseFloat($("#paid").val()));
     })
 
-    // 4. Gestion de la quantité, prix et remise par ligne
+    // 5. Gestion de la quantité, prix et remise par ligne
     $("#myOrder").delegate(".quantity_product, .productprice, .discount", "keyup change", function() {
       var tr = $(this).closest('tr');
       var quantity = parseInt(tr.find(".quantity_product").val()) || 0;
       var price = parseFloat(tr.find(".productprice").val()) || 0;
       var discount_rate = parseFloat(tr.find(".discount").val()) / 100 || 0;
-      var max_stock = parseInt(tr.find(".productstock").val()) || 0;
 
-      if (quantity > max_stock) {
-        swal("Warning", "Stock Insuffisant pour ce produit. Max: " + max_stock, "warning");
-        quantity = max_stock;
-        tr.find(".quantity_product").val(quantity);
-      }
+      // NOTE : Le contrôle de la quantité vs stock max est fait ici uniquement si le max HTML est défini
       if (quantity < 0) {
         quantity = 1;
         tr.find(".quantity_product").val(quantity);
@@ -597,15 +594,17 @@ if (isset($_POST['save_order'])) {
 
       calculate(parseFloat($("#paid").val()));
 
+      // Vérification du prix minimum (peut rester en client-side pour feedback immédiat)
       if ($(this).hasClass('productprice')) {
         var min_price = parseFloat(tr.find(".productmin").val()) || 0;
         if (price < min_price) {
-          swal("Warning", "Erreur : Le prix de vente doit être supérieur ou égal au prix minimum (" + min_price + ").", "warning");
+          // C'est un simple avertissement/feedback. La VRAIE validation est côté serveur.
+          // swal("Warning", "Avertissement : Le prix de vente est inférieur au prix minimum (" + min_price + ").", "warning");
         }
       }
     });
 
-    // 5. Fonction de calcul globale
+    // 6. Fonction de calcul globale
     function calculate(paid) {
       var total_net_apres_remise = 0;
       var total_remise_valeur = 0;
@@ -624,57 +623,26 @@ if (isset($_POST['save_order'])) {
       var tva = total_net_apres_remise * tva_rate;
 
       var total_ttc_a_payer = total_net_apres_remise + tva;
-      var total_ttc_a_payer_fixe = total_ttc_a_payer.toFixed(2);
-
 
       var due = (paid || 0) - total_ttc_a_payer;
 
       $("#thetotal").val(total_ht_avant_tva.toFixed(2));
       $("#remise").val(total_remise_valeur.toFixed(2));
       $("#tva").val(tva.toFixed(2));
-      $("#total").val(total_ttc_a_payer_fixe); // Mise à jour du total TTC
+      $("#total").val(total_ttc_a_payer.toFixed(2));
       $("#due").val(due.toFixed(2));
-
-      // 🛑 NOUVEAUTÉ : Vérification de l'argent reçu
-      if (parseFloat(paid) < parseFloat(total_ttc_a_payer_fixe)) {
-        $("#paid").css('border-color', 'red');
-        $("#saveOrderBtn").prop('disabled', true);
-      } else {
-        $("#paid").css('border-color', ''); // Réinitialiser la couleur
-        $("#saveOrderBtn").prop('disabled', false);
-      }
     }
 
-    // 6. Gestion du paiement (Argent reçu)
+    // 7. Gestion du paiement (Argent reçu)
     $("#paid").keyup(function() {
       var paid = parseFloat($(this).val()) || 0;
       calculate(paid);
     });
 
-    // 7. 🛑 NOUVEAUTÉ : Validation finale lors de la soumission du formulaire
-    $('#orderForm').on('submit', function(e) {
-      var totalTTC = parseFloat($("#total").val()) || 0;
-      var paidAmount = parseFloat($("#paid").val()) || 0;
-
-      // S'assurer que le calcul est à jour avant la soumission
-      calculate(paidAmount);
-
-      if (paidAmount < totalTTC) {
-        e.preventDefault(); // Empêcher l'envoi du formulaire
-        swal("Erreur de Paiement", "Le montant d'argent reçu (" + paidAmount.toFixed(2) + " FCFA) est inférieur au total TTC à payer (" + totalTTC.toFixed(2) + " FCFA). Veuillez ajuster le montant reçu.", "error");
-        $("#paid").focus();
-        return false;
-      }
-      return true; // Continuer la soumission si la vérification est OK
-    });
-
-
-    // Initialisation au chargement de la page
+    // 8. Initialisation
     if ($('#myOrder tbody tr').length === 0) {
       add_new_row();
     }
-    // Appel initial pour s'assurer que le bouton est désactivé si le total est > 0 et paid = 0
-    calculate(parseFloat($("#paid").val()));
 
   });
 </script>
