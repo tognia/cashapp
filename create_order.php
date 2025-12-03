@@ -89,20 +89,6 @@ if (isset($_POST['save_order'])) {
   $arr_product_remise = $_POST['productremise'];
   $arr_product_total = $_POST['producttotal'];
 
-  if ($paid < $total) {
-    $has_error = true;
-    // On ne devrait pas arriver ici si le JS fonctionne
-    echo '<script type="text/javascript">
-                jQuery(function validation(){
-                    swal("Warning", "Montant Payé Erroné !!!!!", "warning", {
-                        button: "Continue",
-                    });
-                     return false;
-                });
-                </script>';
-    throw new Exception("Montant Payé Erroné " . $paid);
-  }
-
   // Vérification minimale
   if (empty($arr_product_id) || array_sum($arr_product_qty) == 0) {
     echo '<script type="text/javascript">
@@ -222,11 +208,12 @@ if (isset($_POST['save_order'])) {
         // Redirection après succès (peut-être vers la page d'impression de reçu)
         // Note: La redirection en JS permet de ne pas resoumettre le formulaire
         $_SESSION['invoice_id_to_print'] = $invoice_id; // Stocker l'ID pour l'impression
+
         echo '<script>
-                    swal("Success", "Opération enregistrée avec succès. Facture #' . $invoice_id . '", "success").then(() => {
-                        window.location.href="order.php"; // Ou à la page d\'impression/vue
-                    });
-                </script>';
+    swal("Success", "Opération enregistrée avec succès. Facture #' . $invoice_id . '", "success").then(() => {
+        window.location.href="print_receipt.php?id=' . $invoice_id . '"; // REDIRECTION VERS L\'IMPRESSION
+    });
+    </script>';
       } else {
         $pdo->rollBack();
         echo '<script>swal("Error", "Échec de l\'insertion de la facture.", "error");</script>';
@@ -392,7 +379,7 @@ if (isset($_POST['save_order'])) {
         </div>
 
         <div class="box-footer" align="center">
-          <input type="submit" name="save_order" value="Enregistrer Opération" class="btn btn-success" onclick="return confirm('Êtes-vous sûr de vouloir enregistrer cette transaction ?')">
+          <input type="submit" name="save_order" value="Enregistrer Opération" id="saveOrderBtn" class="btn btn-success" onclick="return confirm('Êtes-vous sûr de vouloir enregistrer cette transaction ?')">
           <a href="order.php" class="btn btn-warning">Annuler</a>
         </div>
       </form>
@@ -606,37 +593,62 @@ if (isset($_POST['save_order'])) {
     });
 
     // 5. Fonction de calcul globale
+    /**
+     * Calcule les totaux de la commande, y compris la TVA (Taxe sur la valeur ajoutée) et la remise.
+     * * Hypothèses de l'utilisateur:
+     * 1. La valeur dans .producttotal est le prix net final APRES remise.
+     * 2. La TVA est incluse AVANT la remise (ce qui suggère qu'elle fait partie du prix unitaire de base).
+     * 3. Nous allons DÉDUIRE la TVA pour trouver le HT à partir du TTC total si nécessaire.
+     */
     function calculate(paid) {
-      var total_net_apres_remise = 0;
-      var total_remise_valeur = 0;
+      // 1. Initialiser les totaux
+      var total_net_apres_remise = 0; // Somme des .producttotal (Montant total TTC dû APRES remise)
+      var total_remise_valeur = 0; // Somme des .remise (Montant total de la remise)
+      var tva_rate = 0.1925; // Taux de TVA (19.25%)
 
+      // 2. Calculer le total net TTC après remise
       $(".producttotal").each(function() {
+        // total_net_apres_remise est le total TTC DÛ (après remise)
         total_net_apres_remise += (parseFloat($(this).val()) || 0);
       });
 
+      // 3. Calculer le total de la remise
       $(".remise").each(function() {
         total_remise_valeur += (parseFloat($(this).val()) || 0);
       });
 
-      var total_ht_avant_tva = total_net_apres_remise + total_remise_valeur;
+      // 4. Calculer le Total TTC AVANT remise (cela inclut la TVA)
+      // C'est le montant qui aurait été dû sans la remise.
+      var total_ttc_avant_remise = total_net_apres_remise + total_remise_valeur;
 
-      var tva_rate = 0.1925;
-      var tva = total_net_apres_remise * tva_rate;
+      // 5. Calculer le Total HT AVANT TVA (Total Hors Taxe, avant remise)
+      // Nous déduisons la TVA du total TTC avant remise pour trouver le HT.
+      // TTC = HT * (1 + tva_rate)  =>  HT = TTC / (1 + tva_rate)
+      var total_ht_avant_tva = total_ttc_avant_remise / (1 + tva_rate);
 
-      var total_ttc_a_payer = total_net_apres_remise + tva;
+      // 6. Calculer le Montant de la TVA (sur le total TTC avant remise)
+      // TVA = TTC - HT
+      var tva = total_ttc_avant_remise - total_ht_avant_tva;
+
+      // Le montant final à payer (TTC) est déjà total_net_apres_remise
+      var total_ttc_a_payer = total_net_apres_remise;
       var total_ttc_a_payer_fixe = total_ttc_a_payer.toFixed(2);
 
 
-      var due = (paid || 0) - total_ttc_a_payer;
+      // 7. Calculer le 'Reste à payer' (Due)
+      // Assurez-vous que 'paid' est bien un nombre.
+      var due = (parseFloat(paid) || 0) - total_ttc_a_payer;
 
+      // 8. Mettre à jour les champs
+      // Note: Utiliser le total HT (avant TVA et remise) pour #thetotal
       $("#thetotal").val(total_ht_avant_tva.toFixed(2));
       $("#remise").val(total_remise_valeur.toFixed(2));
       $("#tva").val(tva.toFixed(2));
-      $("#total").val(total_ttc_a_payer_fixe); // Mise à jour du total TTC
+      $("#total").val(total_ttc_a_payer_fixe); // Total TTC Final (APRES remise)
       $("#due").val(due.toFixed(2));
 
-      // 🛑 NOUVEAUTÉ : Vérification de l'argent reçu
-      if (parseFloat(paid) < parseFloat(total_ttc_a_payer_fixe)) {
+      // 9. 🛑 Vérification de l'argent reçu (logique inchangée)
+      if ((parseFloat(paid) || 0) < parseFloat(total_ttc_a_payer_fixe)) {
         $("#paid").css('border-color', 'red');
         $("#saveOrderBtn").prop('disabled', true);
       } else {
