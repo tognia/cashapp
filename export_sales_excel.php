@@ -1,9 +1,15 @@
 <?php
+// Démarrer la mise en tampon de sortie pour éviter les problèmes d'en-tête (headers already sent) 
+// causés par des messages d'erreur (Notices, Warnings) ou des espaces blancs accidentels.
+ob_start();
+
 // Inclure la connexion à la base de données
 include_once 'db/connect_db.php';
 
 // Vérification minimale de session
+// Note: Assurez-vous que la session est démarrée dans votre header ou dans connect_db.php
 if (empty($_SESSION['user_name'])) {
+    ob_end_clean(); // Nettoyer le tampon si on quitte
     exit('Accès non autorisé.');
 }
 
@@ -55,7 +61,10 @@ $filename = 'rapport_ventes_filtre_' . date('Ymd_His') . '.csv';
 header('Content-Type: text/csv; charset=utf-8');
 header('Content-Disposition: attachment; filename="' . $filename . '"');
 
-// 3. Ouvrir un pointeur vers le flux de sortie
+// 3. Supprimer tout contenu mis en tampon (comme les erreurs ou notices Xdebug)
+ob_end_clean();
+
+// 4. Ouvrir un pointeur vers le flux de sortie
 $output = fopen('php://output', 'w');
 $delimiter = ';';
 
@@ -63,7 +72,7 @@ $delimiter = ';';
 fprintf($output, chr(0xEF) . chr(0xBB) . chr(0xBF));
 
 // Écrire l'en-tête du fichier CSV (les titres des colonnes)
-fputcsv($output, array('ID Transaction', 'OPERATEUR', 'CLIENT ID', 'DATE', 'MONTANT HT', 'TVA', 'MONTANT TOTAL (FCFA)', 'MODE PAIEMENT'), $delimiter);
+fputcsv($output, array('ID Transaction', 'OPERATEUR', 'CLIENT ID', 'DATE', 'TVA', 'MONTANT TOTAL (FCFA)', 'MODE PAIEMENT'), $delimiter);
 
 // Écrire les données ligne par ligne
 foreach ($transactions as $row) {
@@ -73,9 +82,8 @@ foreach ($transactions as $row) {
         $row['cashier_name'],
         $row['id_client'],
         $row['order_date'],
-        $row['subtotal'], // Total HT (si subtotal est le champ HT)
         $row['tva'],
-        $row['total'],     // Montant Total
+        $row['total'],
         $row['payment_mode']
     ];
     fputcsv($output, $csv_row, $delimiter);
