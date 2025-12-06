@@ -2,8 +2,9 @@
 include_once 'db/connect_db.php';
 
 // Vérification de la session utilisateur
-if ($_SESSION['user_name'] == "") {
+if (empty($_SESSION['user_name'])) {
   header('location:index.php');
+  exit(); // Ajout d'exit() après header pour arrêter l'exécution
 } else {
   // Inclure le header approprié en fonction du rôle
   if ($_SESSION['role'] == "Admin" || $_SESSION['role'] == "Responsable") {
@@ -43,12 +44,14 @@ if ($is_admin) {
 }
 
 // Pour simplifier l'envoi des filtres aux pages d'exportation
-$export_params = http_build_query(array_merge($_POST, ['date_1' => $date_1, 'date_2' => $date_2, 'shop' => $leshop]));
+$export_params = http_build_query([
+  'date_1' => $date_1,
+  'date_2' => $date_2,
+  'shop' => $leshop
+]);
 ?>
 
-<!-- Content Wrapper. Contains page content -->
 <div class="content-wrapper">
-  <!-- Main content -->
   <section class="content container-fluid">
     <div class="box box-success">
       <form action="" method="POST" autocomplete="off">
@@ -63,9 +66,12 @@ $export_params = http_build_query(array_merge($_POST, ['date_1' => $date_1, 'dat
           <?php endif; ?>
 
           <div class="pull-right">
-            <!-- BOUTONS D'EXPORTATION -->
-            <a href="export_sales_pdf.php?<?php echo $export_params; ?>" target="_blank" class="btn btn-primary btn-sm" style="margin-right: 5px;"><i class="fa fa-file-pdf-o"></i> Générer PDF</a>
-            <a href="export_sales_excel.php?<?php echo $export_params; ?>" class="btn btn-success btn-sm"><i class="fa fa-file-excel-o"></i> Exporter Excel</a>
+            <button type="button" onclick="openPrintSalesWindow('<?php echo $export_params; ?>')" class="btn btn-primary btn-sm" style="margin-right: 5px;" title="Ouvrir la liste des ventes dans une fenêtre d'impression">
+              <i class="fa fa-file-pdf-o"></i> Générer PDF
+            </button>
+            <button type="button" onclick="downloadExcelSales('<?php echo $export_params; ?>')" class="btn btn-success btn-sm" title="Télécharger le rapport des ventes au format Excel">
+              <i class="fa fa-file-excel-o"></i> Exporter Excel
+            </button>
           </div>
         </div>
 
@@ -157,7 +163,6 @@ $export_params = http_build_query(array_merge($_POST, ['date_1' => $date_1, 'dat
             </div>
           </div>
 
-          <!--- Transaction Table -->
           <h4 class="box-title">Détail des Transactions</h4>
           <div style="overflow-x:auto;">
             <table class="table table-striped" id="mySalesReport">
@@ -188,7 +193,6 @@ $export_params = http_build_query(array_merge($_POST, ['date_1' => $date_1, 'dat
             </table>
           </div>
 
-          <!-- Transaction Graphic -->
           <?php
           // Requête 3: Graphique de revenu journalier
           $select_chart = $pdo->prepare("SELECT order_date, sum(total) as price FROM tbl_invoice " . $query_where_clause . " GROUP BY order_date ORDER BY order_date ASC");
@@ -272,10 +276,7 @@ $export_params = http_build_query(array_merge($_POST, ['date_1' => $date_1, 'dat
 
 
   </section>
-  <!-- /.content -->
 </div>
-<!-- /.content-wrapper -->
-
 <script>
   // Initialisation de DataTables pour la liste des transactions
   $(document).ready(function() {
@@ -288,7 +289,6 @@ $export_params = http_build_query(array_merge($_POST, ['date_1' => $date_1, 'dat
 
   /*
    * AMÉLIORATION DU DATEPICKER
-   * Ajout du format de date BDD et activation de la navigation complète (mois/année).
    */
   // Datepicker DE DÉBUT
   $('#datepicker_1').datepicker({
@@ -305,6 +305,38 @@ $export_params = http_build_query(array_merge($_POST, ['date_1' => $date_1, 'dat
     todayHighlight: true,
     todayBtn: "linked"
   });
+
+  // 1. FONCTION POUR GÉNÉRER LE PDF (Fenêtre de style "Application")
+  function openPrintSalesWindow(params) {
+    var url = 'export_sales_pdf.php?' + params;
+    var windowName = 'SalesPDFExport';
+
+    // Paramètres pour une fenêtre sans barre d'adresse/outils
+    var features = 'width=900,height=700,scrollbars=yes,resizable=yes,location=no,menubar=no,toolbar=no,status=no';
+
+    // Ouvre la nouvelle fenêtre
+    window.open(url, windowName, features);
+  }
+
+  // 2. FONCTION POUR TÉLÉCHARGER L'EXCEL
+  function downloadExcelSales(params) {
+    var url = 'export_sales_excel.php?' + params;
+
+    // Crée un lien temporaire
+    var link = document.createElement('a');
+    link.href = url;
+    link.style.display = 'none'; // Le rend invisible
+    document.body.appendChild(link);
+
+    // Déclenche le téléchargement
+    link.click();
+
+    // Supprime le lien après le téléchargement
+    document.body.removeChild(link);
+
+    // Afficher une alerte utilisateur (facultatif)
+    // swal("Téléchargement lancé", "Votre fichier Excel est en cours de téléchargement.", "info");
+  }
 </script>
 
 <script>

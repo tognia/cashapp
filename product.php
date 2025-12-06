@@ -111,6 +111,7 @@ if (isset($_POST['add_product'])) {
     $select_code->execute();
 
     $insert_success = false;
+    $shop_success = true; // Initialize to true
 
     if ($select_code->rowCount() > 0) {
         echo '<script type="text/javascript">
@@ -156,8 +157,8 @@ if (isset($_POST['add_product'])) {
                         (product_code, product_sku, product_name, product_category, product_brand, purchase_price,
                          sell_price, min_price, discount, stock, min_stock, product_satuan, supplier,
                          description, img, place_in_storeroom, place_in_store)
-                        VALUES(:product_code, :product_sku, :product_name, :product_category, :product_brand, :purchase_price, :sell_price,
-                        :min_price, :discount, :stock, :min_stock, :satuan, :supplier, :desc1, :img, :place_in_storeroom, :place_in_store)");
+                         VALUES(:product_code, :product_sku, :product_name, :product_category, :product_brand, :purchase_price, :sell_price,
+                         :min_price, :discount, :stock, :min_stock, :satuan, :supplier, :desc1, :img, :place_in_storeroom, :place_in_store)");
 
                     $params = [
                         ':product_code' => $code,
@@ -185,16 +186,16 @@ if (isset($_POST['add_product'])) {
                         $select_agences = $pdo->prepare("SELECT code_agence FROM agence");
                         $select_agences->execute();
 
-                        $shop_success = true;
+
                         while ($row_agence = $select_agences->fetch(PDO::FETCH_ASSOC)) {
                             $shop = $row_agence['code_agence'];
 
                             $insert_item = $pdo->prepare("INSERT INTO tbl_shop_item(shop_code, product_code, product_sku, product_name,
-                                product_category, product_brand, purchase_price, sell_price, min_price, discount, stock,
-                                min_stock, product_satuan, supplier, description, place_in_store, img)
-                                VALUES(:shop, :product_code, :product_sku, :product_name, :product_category,
-                                :product_brand, :purchase_price, :sell_price, :min_price, :discount, :stock_init,
-                                :min_stock_init, :satuan, :supplier, :desc1, :place_in_store, :img)");
+                                 product_category, product_brand, purchase_price, sell_price, min_price, discount, stock,
+                                 min_stock, product_satuan, supplier, description, place_in_store, img)
+                                 VALUES(:shop, :product_code, :product_sku, :product_name, :product_category,
+                                 :product_brand, :purchase_price, :sell_price, :min_price, :discount, :stock_init,
+                                 :min_stock_init, :satuan, :supplier, :desc1, :place_in_store, :img)");
 
                             $shop_params = [
                                 ':shop' => $shop,
@@ -270,12 +271,15 @@ if (isset($_POST['add_product'])) {
         <div class="box box-primary">
             <div class="box-header with-border">
                 <h3 class="box-title">Gestion des Produits</h3>
-
                 <div class="pull-right" style="margin-left: 10px;">
                     <a href="product.php?status=ok" class="btn btn-primary btn-sm"><i class="fa fa-check-circle"></i> STOCK OK </a>
                     <a href="product.php?status=alert" class="btn btn-warning btn-sm"><i class="fa fa-exclamation-triangle"></i> STOCK ALERTE</a>
                     <a href="product.php?status=null" class="btn btn-danger btn-sm"><i class="fa fa-times-circle"></i> STOCK NULL</a>
                     <a href="product.php?status=all" class="btn btn-default btn-sm"><i class="fa fa-list"></i> TOUS</a>
+
+                    <button type="button" onclick="openPrintWindow('<?php echo htmlspecialchars($status); ?>')" class="btn btn-info btn-sm" style="margin-left: 10px;" title="Imprimer la liste actuelle">
+                        <i class="fa fa-print"></i> Imprimer la Liste
+                    </button>
                 </div>
             </div>
 
@@ -500,6 +504,18 @@ if (isset($_POST['add_product'])) {
             }
             reader.readAsDataURL(input.files[0]);
         }
+    }
+
+    // NEW FUNCTION: Open Print Window as a pseudo-desktop app
+    function openPrintWindow(status) {
+        var url = 'print_product_list.php?status=' + status;
+        var windowName = 'PrintProductList';
+
+        // Define window features to remove browser chrome
+        var features = 'width=800,height=600,scrollbars=yes,resizable=yes,location=no,menubar=no,toolbar=no,status=no';
+
+        // Open the window
+        window.open(url, windowName, features);
     }
 
     $(document).ready(function() {

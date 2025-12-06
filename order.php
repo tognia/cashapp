@@ -3,8 +3,9 @@
 include_once 'db/connect_db.php';
 
 // Vérification de la session utilisateur
-if ($_SESSION['user_name'] == "") {
+if (empty($_SESSION['user_name'])) {
     header('location:index.php');
+    exit();
 } else {
     // Inclure le header approprié en fonction du rôle
     if ($_SESSION['role'] == "Admin") {
@@ -45,6 +46,10 @@ if ($id) {
             </script>';
     }
 }
+
+// Définir les paramètres POST pour l'exportation
+// Ces paramètres contiennent potentiellement date_1, date_2 et shop
+$export_params = http_build_query($_POST);
 ?>
 
 <html>
@@ -65,9 +70,19 @@ include("include/stat_op_caisse.php");
             <h3 class="box-title">Liste des transactions</h3>
 
             <div class="pull-right">
-                <button onclick="window.print()" class="btn btn-warning btn-sm" style="margin-right: 5px;"><i class="fa fa-print"></i> Imprimer la page</button>
-                <a href="export_pdf.php?<?php echo http_build_query($_POST); ?>" target="_blank" class="btn btn-primary btn-sm" style="margin-right: 5px;"><i class="fa fa-file-pdf-o"></i> Générer PDF</a>
-                <a href="export_excel.php?<?php echo http_build_query($_POST); ?>" class="btn btn-success btn-sm" style="margin-right: 5px;"><i class="fa fa-file-excel-o"></i> Exporter en Excel</a>
+
+                <button onclick="openDesktopExportWindow('print_current_view.php', '<?php echo $export_params; ?>', 'PrintListView')" class="btn btn-warning btn-sm" style="margin-right: 5px;" title="Imprimer la liste filtrée">
+                    <i class="fa fa-print"></i> Imprimer la liste
+                </button>
+
+                <button type="button" onclick="openDesktopExportWindow('export_pdf.php', '<?php echo $export_params; ?>', 'SalesPDF')" class="btn btn-primary btn-sm" style="margin-right: 5px;" title="Ouvrir le PDF dans une fenêtre sans barre de navigation">
+                    <i class="fa fa-file-pdf-o"></i> Générer PDF
+                </button>
+
+                <button type="button" onclick="downloadFile('export_excel.php', '<?php echo $export_params; ?>')" class="btn btn-success btn-sm" style="margin-right: 5px;" title="Exporter les données en fichier Excel">
+                    <i class="fa fa-file-excel-o"></i> Exporter en Excel
+                </button>
+
                 <a href="create_order.php" class="btn btn-info btn-sm">Nouvelle Transaction</a>
             </div>
 
@@ -182,7 +197,8 @@ include("include/stat_op_caisse.php");
                                     if (($_SESSION['role'] ?? '') == "Admin" || (($_SESSION['role'] ?? '') == "Responsable" && $row->order_date == $today_date)) { ?>
                                         <a href="order.php?id=<?php echo $row->invoice_id; ?>" onclick="return confirm('Supprimer la transaction?')" class="btn btn-danger btn-sm"><i class="fa fa-trash"></i></a>
                                     <?php } ?>
-                                    <a href="misc/nota.php?id=<?php echo $row->invoice_id; ?>" target="_blank" class="btn btn-info btn-sm"><i class="fa fa-print"></i></a>
+
+                                    <button type="button" onclick="openDesktopReceiptWindow(<?php echo $row->invoice_id; ?>)" class="btn btn-info btn-sm" title="Imprimer le Reçu"><i class="fa fa-print"></i></button>
                                 </td>
                             </tr>
                         <?php
@@ -209,21 +225,14 @@ include("include/stat_op_caisse.php");
 <script>
     /*
      * AMÉLIORATION DU DATEPICKER
-     * La navigation est assurée nativement par la librairie, mais on ajoute le format
-     * de date nécessaire pour la BDD (yyyy-mm-dd) et on s'assure que le calendrier est prêt.
      */
 
     // Datepicker DE DÉBUT
     $('#datepicker_1').datepicker({
         autoclose: true,
-        // Format pour correspondre à la requête SQL (obligatoire pour le filtre)
         format: 'yyyy-mm-dd',
-        // Option qui permet de mettre en surbrillance la date du jour
         todayHighlight: true,
-        // Ajoute un bouton pour sélectionner rapidement la date d'aujourd'hui
         todayBtn: "linked",
-        // Permet de cliquer sur l'en-tête pour passer à la sélection des mois et années.
-        // Cette option peut varier ou être absente selon la librairie Datepicker utilisée.
     });
 
     // Datepicker DE FIN
@@ -236,8 +245,57 @@ include("include/stat_op_caisse.php");
 
     // Assurez-vous que le DataTable pour 'mySalesReport' existe si vous l'initialisez
     $(document).ready(function() {
-        $('#mySalesReport').DataTable();
+        if ($.fn.DataTable.isDataTable('#mySalesReport')) {
+            $('#mySalesReport').DataTable();
+        }
     });
+
+
+    // --- NOUVELLES FONCTIONS JAVASCRIPT POUR LES FENÊTRES DE STYLE APPLICATION ---
+
+    // Fonction principale pour ouvrir une fenêtre sans barre de navigation (pour PDF/Impression)
+    function openDesktopExportWindow(page, params, windowName) {
+        var url = page + '?' + params;
+        // On rend la fenêtre un peu plus petite que la précédente, plus adaptée à une liste de transactions
+        var features = 'width=1000,height=700,scrollbars=yes,resizable=yes,location=no,menubar=no,toolbar=no,status=no';
+
+        var newWindow = window.open(url, windowName, features);
+
+        // Si la page est 'print_current_view.php', on veut déclencher l'impression après le chargement.
+        if (page === 'print_current_view.php') {
+            newWindow.onload = function() {
+                // S'assurer que la fonction d'impression n'est appelée qu'une seule fois
+                newWindow.print();
+            };
+        }
+    }
+
+    // Fonction pour télécharger un fichier (Excel)
+    function downloadFile(page, params) {
+        var url = page + '?' + params;
+
+        var link = document.createElement('a');
+        link.href = url;
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    // Fonction pour imprimer un reçu (misc/nota.php)
+    function openDesktopReceiptWindow(invoiceId) {
+        var url = 'misc/nota.php?id=' + invoiceId;
+        var windowName = 'ReceiptPrint' + invoiceId;
+        // Petites dimensions pour un reçu de caisse
+        var features = 'width=400,height=600,scrollbars=yes,resizable=yes,location=no,menubar=no,toolbar=no,status=no';
+
+        var newWindow = window.open(url, windowName, features);
+
+        // Optionnel: Déclencher l'impression immédiatement si c'est un reçu de caisse
+        newWindow.onload = function() {
+            newWindow.print();
+        };
+    }
 </script>
 
 <script>
