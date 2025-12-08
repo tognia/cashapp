@@ -1,11 +1,11 @@
 <?php
-// Inclure le fichier de connexion et de sécurité
+// create_order.php
 include_once 'db/connect_db.php';
 
 // Vérification de la session utilisateur
 if (!isset($_SESSION['user_name']) || $_SESSION['user_name'] == "") {
   include_once 'inc/404.php';
-  exit(); // Arrêter l'exécution si non connecté
+  exit();
 }
 
 // Inclure l'en-tête en fonction du rôle
@@ -18,36 +18,6 @@ if ($_SESSION['role'] == "Admin") {
 error_reporting(0);
 date_default_timezone_set('Africa/Douala');
 $shop = $_SESSION['magasin'];
-
-// --- Fonctions utilitaires (peuvent être conservées, mais non utilisées directement dans la nouvelle logique JS) ---
-
-function fill_product($pdo)
-{
-  $output = '';
-  $s = $_SESSION['magasin'];
-  $req = "SELECT * FROM tbl_shop_item WHERE shop_code = ?";
-  $select = $pdo->prepare($req);
-  $select->execute([$s]);
-  $result = $select->fetchAll();
-
-  foreach ($result as $row) {
-    $output .= '<option value="' . $row['product_id'] . '">' . $row["product_name"] . '_' . $row["product_code"] . '</option>';
-  }
-  return $output;
-}
-
-function fill_client($pdo)
-{
-  $output = '';
-  $select = $pdo->prepare("SELECT * FROM users ORDER BY username");
-  $select->execute();
-  $result = $select->fetchAll();
-
-  foreach ($result as $row) {
-    $output .= '<option value="' . $row['username'] . '">' . $row["firstname"] . ' ' . $row["middlename"] . ' ' . $row["lastname"] . '</option>';
-  }
-  return $output;
-}
 
 // --- Initialisation des tableaux d'alerte (Stock Min) ---
 $_SESSION['tab_alert'] = array();
@@ -62,21 +32,18 @@ $_SESSION['count_alert'] = 0;
 // --- Logique de Sauvegarde de la Commande ---
 if (isset($_POST['save_order'])) {
 
-  // Récupération des données du formulaire
   $cashier_name = $_POST['cashier_name'];
   $id_client = $_POST['client'];
   $order_date = date("Y-m-d", strtotime($_POST['orderdate']));
-  $order_time = date("H:i:s", strtotime($_POST['timeorder'])); // Ajout des secondes pour précision
+  $order_time = date("H:i:s", strtotime($_POST['timeorder']));
 
-  // Totaux calculés
-  $total = $_POST['total'];      // Total TTC
+  $total = $_POST['total'];
   $paid = $_POST['paid'];
   $due = $_POST['due'];
   $remise = $_POST['remise'];
   $tva = $_POST['tva'];
   $payment_mode = $_POST['payment_mode'];
 
-  // Détails des produits
   $arr_product_id = $_POST['productid'];
   $arr_product_code = $_POST['productcode'];
   $arr_product_name = $_POST['productname'];
@@ -89,24 +56,18 @@ if (isset($_POST['save_order'])) {
   $arr_product_remise = $_POST['productremise'];
   $arr_product_total = $_POST['producttotal'];
 
-  // Vérification minimale
   if (empty($arr_product_id) || array_sum($arr_product_qty) == 0) {
     echo '<script type="text/javascript">
                 jQuery(function validation(){
                     swal("Warning", "Veuillez ajouter des produits à la transaction.", "warning", {
                         button: "Continue",
                     });
-                   
                 });
                 </script>';
   } else {
     try {
-
-
-      // Début de la transaction
       $pdo->beginTransaction();
 
-      // 1. Insertion de la facture principale
       $insert_invoice = $pdo->prepare("INSERT INTO tbl_invoice(cashier_name, id_client, order_date, time_order, total, paid, due, remise, tva, payment_mode)
                                              VALUES(:name, :id_client, :orderdate, :timeorder, :total, :paid, :due, :remise, :tva, :payment_mode)");
 
@@ -126,9 +87,8 @@ if (isset($_POST['save_order'])) {
 
       if ($invoice_id) {
         $has_error = false;
-        $alert_products = []; // Pour stocker les produits en alerte
+        $alert_products = [];
 
-        // 2. Traitement des détails de la facture et mise à jour du stock
         for ($i = 0; $i < count($arr_product_id); $i++) {
 
           $product_id = $arr_product_id[$i];
@@ -138,32 +98,21 @@ if (isset($_POST['save_order'])) {
           $price_sold = $arr_product_price[$i];
           $min_price = $arr_product_min[$i];
 
-          // Calculs
-          $rem_qty = $current_stock - $qty_sold; // Nouveau stock restant
-          $diff_price = $price_sold - $min_price; // Différence prix vendu et prix min
-          $reste_stock_min = $rem_qty - $min_stock; // Écart avec le stock min
+          $rem_qty = $current_stock - $qty_sold;
+          $diff_price = $price_sold - $min_price;
+          $reste_stock_min = $rem_qty - $min_stock;
 
-          // --- Vérifications (Ces alertes devraient idéalement être gérées en JS avant soumission) ---
-          // if ($qty_sold > $current_stock) {
-          //   $has_error = true;
-          //   // On ne devrait pas arriver ici si le JS fonctionne
-          //   throw new Exception("Stock insuffisant pour le produit " . $arr_product_code[$i]);
-          // }
           if ($diff_price < 0) {
             $has_error = true;
-            // On ne devrait pas arriver ici si le JS fonctionne
             throw new Exception("Prix de vente inférieur au prix minimum pour " . $arr_product_code[$i]);
           }
-          // -----------------------------------------------------------------------------------------
 
-          // Mise à jour du stock
           $update_stock = $pdo->prepare("UPDATE tbl_shop_item SET stock = :new_stock WHERE shop_code = :shop AND product_id = :id");
           $update_stock->bindParam(':new_stock', $rem_qty);
           $update_stock->bindParam(':shop', $shop);
           $update_stock->bindParam(':id', $product_id);
           $update_stock->execute();
 
-          // Insertion du détail de la facture
           $insert_detail = $pdo->prepare("INSERT INTO tbl_invoice_detail(invoice_id, product_id, product_code, product_name, qty, product_satuan, price, total, order_date, remise)
                                                     VALUES(:invid, :productid, :productcode, :productname, :qty, :productsatuan, :price, :total, :orderdate, :remise)");
 
@@ -179,7 +128,6 @@ if (isset($_POST['save_order'])) {
           $insert_detail->bindParam(':remise', $arr_product_remise[$i]);
           $insert_detail->execute();
 
-          // Gestion de l'alerte stock (si le stock atteint ou passe sous le seuil min)
           if ($reste_stock_min <= 0) {
             $alert_products[] = [
               'id' => $product_id,
@@ -191,7 +139,6 @@ if (isset($_POST['save_order'])) {
           }
         }
 
-        // Mettre à jour la session d'alerte après le succès de la transaction
         foreach ($alert_products as $prod) {
           array_push($_SESSION['tab_alert']['id'], $prod['id']);
           array_push($_SESSION['tab_alert']['code'], $prod['code']);
@@ -201,17 +148,13 @@ if (isset($_POST['save_order'])) {
         }
         $_SESSION['count_alert'] = count($_SESSION['tab_alert']['id']);
 
-
-        // Valider la transaction
         $pdo->commit();
 
-        // Redirection après succès (peut-être vers la page d'impression de reçu)
-        // Note: La redirection en JS permet de ne pas resoumettre le formulaire
-        $_SESSION['invoice_id_to_print'] = $invoice_id; // Stocker l'ID pour l'impression
+        $_SESSION['invoice_id_to_print'] = $invoice_id;
 
         echo '<script>
     swal("Success", "Opération enregistrée avec succès. Facture #' . $invoice_id . '", "success").then(() => {
-        window.location.href="print_receipt.php?id=' . $invoice_id . '"; // REDIRECTION VERS L\'IMPRESSION
+        window.location.href="print_receipt.php?id=' . $invoice_id . '";
     });
     </script>';
       } else {
@@ -226,17 +169,134 @@ if (isset($_POST['save_order'])) {
 }
 ?>
 
+<style>
+  .scanner-section {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 20px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  }
+
+  .scanner-input-wrapper {
+    position: relative;
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  #barcodeScanner {
+    width: 100%;
+    padding: 15px 50px 15px 15px;
+    font-size: 18px;
+    border: 3px solid #fff;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.95);
+    transition: all 0.3s ease;
+  }
+
+  #barcodeScanner:focus {
+    outline: none;
+    border-color: #ffd700;
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+    transform: scale(1.02);
+  }
+
+  .scanner-icon {
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 24px;
+    color: #667eea;
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+
+    0%,
+    100% {
+      opacity: 1;
+    }
+
+    50% {
+      opacity: 0.5;
+    }
+  }
+
+  .scanner-label {
+    color: white;
+    font-size: 16px;
+    font-weight: bold;
+    margin-bottom: 10px;
+    display: block;
+    text-align: center;
+  }
+
+  .product-row-highlight {
+    background-color: #d4edda !important;
+    animation: fadeIn 0.3s ease;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .quantity-editing {
+    border: 2px solid #ffc107 !important;
+    background-color: #fff9e6 !important;
+  }
+
+  .stats-badge {
+    display: inline-block;
+    padding: 5px 15px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 20px;
+    color: white;
+    margin: 0 5px;
+    font-weight: bold;
+  }
+</style>
+
 <div class="content-wrapper">
   <section class="content-header">
     <h1>
-      🛒 Transaction Caisse
+      🛒 Transaction Caisse - Mode Scanner
     </h1>
     <hr>
   </section>
 
   <section class="content container-fluid">
+
+    <!-- SECTION SCANNER -->
+    <div class="scanner-section">
+      <label class="scanner-label">
+        📱 SCANNER CODE-BARRE / SAISIR CODE PRODUIT
+      </label>
+      <div class="scanner-input-wrapper">
+        <input
+          type="text"
+          id="barcodeScanner"
+          placeholder="Scannez ou tapez le code produit puis Entrée..."
+          autocomplete="off"
+          autofocus>
+        <i class="fa fa-barcode scanner-icon"></i>
+      </div>
+      <div style="text-align: center; margin-top: 15px;">
+        <span class="stats-badge" id="itemCount">0 articles</span>
+        <span class="stats-badge" id="totalItems">0 unités</span>
+      </div>
+    </div>
+
     <div class="box box-success">
-      <form action="" method="POST">
+      <form action="" method="POST" id="orderForm">
         <div class="box-body">
 
           <div class="col-md-4">
@@ -270,7 +330,7 @@ if (isset($_POST['save_order'])) {
           <div class="col-md-4">
             <div class="form-group">
               <label for="">Client</label>
-              <select class="form-control select2" name="client" required>
+              <select class="form-control select2" name="client" id="clientSelect" required>
                 <option value="common">Client Régulier (common)</option>
                 <?php
                 $select_client = $pdo->prepare("SELECT * FROM users ORDER BY firstname");
@@ -288,26 +348,28 @@ if (isset($_POST['save_order'])) {
 
         <div class="box-body">
           <div class="col-md-12" style="overflow-x:auto;">
-            <table class="table table-border" id="myOrder">
-              <thead>
+            <table class="table table-bordered table-hover" id="myOrder">
+              <thead style="background-color: #f4f4f4;">
                 <tr>
-                  <th>Code/Libellé Search</th>
-                  <th>Code Produit</th>
-                  <th>Libellé</th>
-                  <th>Stock</th>
-                  <th>Prix</th>
-                  <th class="badge badge-warning">Prix Min</th>
-                  <th>Rem %</th>
-                  <th>Rem Val</th>
-                  <th>Quantité</th>
-                  <th>Unité</th>
-                  <th>Total</th>
-                  <th>
-                    <button type="button" name="addOrder" class="btn btn-success btn-sm btn_addOrder"><span><i class="fa fa-plus"></i></span></button>
+                  <th style="width: 100px;">Code</th>
+                  <th style="width: 250px;">Libellé</th>
+                  <th style="width: 80px;">Stock</th>
+                  <th style="width: 100px;">Prix</th>
+                  <th style="width: 100px;" class="badge badge-warning">Prix Min</th>
+                  <th style="width: 70px;">Rem %</th>
+                  <th style="width: 90px;">Rem Val</th>
+                  <th style="width: 90px;">Quantité</th>
+                  <th style="width: 60px;">Unité</th>
+                  <th style="width: 120px;">Total</th>
+                  <th style="width: 60px;">
+                    <button type="button" class="btn btn-danger btn-sm" id="clearAllBtn" title="Vider le panier">
+                      <i class="fa fa-trash"></i>
+                    </button>
                   </th>
                 </tr>
               </thead>
               <tbody>
+                <!-- Les produits seront ajoutés ici dynamiquement -->
               </tbody>
             </table>
           </div>
@@ -339,20 +401,18 @@ if (isset($_POST['save_order'])) {
               </div>
             </div>
 
-
             <div class="form-group">
               <label>Total TTC A Payer</label>
               <div class="input-group">
-                <input type="text" class="form-control pull-right" name="total" id="total" required readonly value="0.00">
+                <input type="text" class="form-control pull-right" name="total" id="total" required readonly value="0.00" style="font-size: 20px; font-weight: bold; background: #e8f5e9;">
                 <div class="input-group-addon"><span>FCFA</span></div>
               </div>
             </div>
 
-
             <div class="form-group">
               <label>Argent reçu</label>
               <div class="input-group">
-                <input type="text" class="form-control pull-right" name="paid" id="paid" required value="0">
+                <input type="text" class="form-control pull-right" name="paid" id="paid" required value="0" style="font-size: 18px;">
                 <div class="input-group-addon"><span>FCFA</span></div>
               </div>
             </div>
@@ -360,14 +420,14 @@ if (isset($_POST['save_order'])) {
             <div class="form-group">
               <label>Remboursement (Monnaie)</label>
               <div class="input-group">
-                <input type="text" class="form-control pull-right" name="due" id="due" required readonly value="0.00">
+                <input type="text" class="form-control pull-right" name="due" id="due" required readonly value="0.00" style="font-size: 18px; background: #fff3cd;">
                 <div class="input-group-addon"><span>FCFA</span></div>
               </div>
             </div>
 
             <div class="form-group">
               <label>Mode Paiement</label>
-              <select class="form-control" name="payment_mode" required>
+              <select class="form-control" name="payment_mode" id="paymentMode" required>
                 <option value="especes">Espèces</option>
                 <option value="orange_money">Orange Money</option>
                 <option value="mtn_money">MTN Money</option>
@@ -379,314 +439,423 @@ if (isset($_POST['save_order'])) {
         </div>
 
         <div class="box-footer" align="center">
-          <input type="submit" name="save_order" value="Enregistrer Opération" id="saveOrderBtn" class="btn btn-success" onclick="return confirm('Êtes-vous sûr de vouloir enregistrer cette transaction ?')">
-          <a href="order.php" class="btn btn-warning">Annuler</a>
+          <input type="submit" name="save_order" value="💾 Enregistrer Opération (F9)" id="saveOrderBtn" class="btn btn-success btn-lg" onclick="return confirm('Êtes-vous sûr de vouloir enregistrer cette transaction ?')">
+          <a href="order.php" class="btn btn-warning btn-lg">Annuler</a>
         </div>
       </form>
     </div>
   </section>
 </div>
+
 <script>
-  // --- Fonction pour ajouter une nouvelle ligne de saisie (celle qui est toujours vide à la fin) ---
-  function add_new_row() {
-    var html = '';
-    html += '<tr class="input-row">';
-    html += '<td><input type="text" class="form-control productSearch" name="productSearch[]" style="width:250px;"><div class="productDropdown" style="position: absolute; z-index: 1000; display: none; background-color: #fff; border: 1px solid #ccc; max-height: 200px; overflow-y: auto;"></div><input type="hidden" class="form-control productid" name="productid[]" value=""></td>';
-
-    html += '<td><input type="text" class="form-control productcode" style="width:100px;" name="productcode[]" readonly></td>';
-    html += '<td><input type="text" class="form-control productname" style="width:220px;" name="productname[]" readonly></td>';
-
-    html += '<td><input type="text" class="form-control productstock" style="width:50px;" name="productstock[]" required readonly><input type="hidden" class="form-control minstock" style="width:50px;" name="minstock[]"></td>';
-
-    html += '<td><input type="text" class="form-control productprice" style="width:90px;" name="productprice[]" value="0"></td>';
-
-    html += '<td><input type="text" class="form-control productmin btn btn-outline-dark" style="width:90px;" name="productmin[]" readonly></td>';
-
-    html += '<td><input type="text" class="form-control discount" style="width:40px;" name="discount[]" value="0"></td>';
-
-    html += '<td><input type="text" class="form-control remise" style="width:60px;" name="productremise[]" readonly value="0"></td>';
-
-    html += '<td><input type="number" min="1" class="form-control quantity_product" style="width:70px;" name="quantity[]" required value="0" readonly></td>';
-
-    html += '<td><input type="text" class="form-control productsatuan" style="width:40px;" name="productsatuan[]" readonly></td>';
-
-    html += '<td><input type="text" class="form-control producttotal" style="width:130px;" name="producttotal[]" readonly value="0.00"></td>';
-
-    html += '<td><button type="button" name="remove" class="btn btn-danger btn-sm btn-remove" disabled><i class="fa fa-remove"></i></button></td>'
-    html += '</tr>';
-
-    $('#myOrder tbody').append(html);
-    $('.input-row:last .productSearch').focus(); // Focus sur le nouveau champ
-  }
-
-  // --- Fonction pour incrémenter la quantité d'une ligne existante ---
-  function update_existing_row(tr_existante, data) {
-    var current_qty = parseInt(tr_existante.find(".quantity_product").val());
-    var max_stock = parseInt(tr_existante.find(".productstock").val());
-    var new_qty = current_qty + 1;
-    var product_name = data['product_name'];
-
-    // Si la nouvelle quantité dépasse le stock
-    if (new_qty > max_stock) {
-      // Option 1 : Bloquer l'incrémentation (Comportement actuel)
-      // swal("Warning", "Stock Insuffisant. Maximum atteint pour " + product_name + " (Max: " + max_stock + ").", "warning");
-      // return;
-
-
-      // Option 2 : Forcer la quantité à être égale au stock (Vente du stock restant)
-      if (current_qty < max_stock) {
-        new_qty = max_stock;
-        swal("Info", "Quantité ajustée au stock maximum (" + max_stock + ") pour " + product_name, "info");
-      } else {
-        swal("Warning", "Stock Insuffisant. Maximum atteint pour " + product_name + " (Max: " + max_stock + ").", "warning");
-        return;
-      }
-
-    }
-
-    // Mettre à jour la quantité (si non bloquée par le 'return')
-    tr_existante.find(".quantity_product").val(new_qty).trigger('change');
-    tr_existante.find(".quantity_product").prop('readonly', false);
-    tr_existante.find(".btn-remove").prop('disabled', false);
-  }
-
-  // --- Fonction pour populer les détails du produit sur une nouvelle ligne ---
-  function populate_new_row(tr, data) {
-    tr.find(".productid").val(data["product_id"]);
-    tr.find(".productcode").val(data["product_code"]);
-    tr.find(".productname").val(data["product_name"]);
-    tr.find(".productstock").val(data["stock"]);
-    tr.find(".minstock").val(data["min_stock"]);
-    tr.find(".productsatuan").val(data["product_satuan"]);
-    tr.find(".productprice").val(data["sell_price"]);
-    tr.find(".productmin").val(data["min_price"]);
-    tr.find(".discount").val(data["discount"]);
-    tr.find(".quantity_product").val(1).prop('readonly', false); // Initialiser à 1 et rendre éditable
-    tr.find(".btn-remove").prop('disabled', false);
-
-    tr.find(".quantity_product").trigger('change');
-
-    tr.removeClass('input-row');
-    add_new_row(); // Ajouter automatiquement une nouvelle ligne de saisie
-  }
-
-
   $(document).ready(function() {
 
-    // ✅ CORRECTION 1 : Le bouton d'ajout manuel fonctionne
-    $(document).on('click', '.btn_addOrder', function() {
-      add_new_row();
-    });
+    let scanTimeout;
+    let currentEditingRow = null;
 
-    // 1. Gestion de la recherche (Code ou Libellé) avec autocomplétion
-    $(document).on('keyup', '.productSearch', function() {
-      var query = $(this).val();
-      var tr = $(this).closest('tr');
-      var dropdown = tr.find('.productDropdown');
+    // ========================================
+    // FONCTION : Scanner de code-barre
+    // ========================================
+    $('#barcodeScanner').on('keypress', function(e) {
+      if (e.which === 13) { // Touche Entrée
+        e.preventDefault();
 
-      if (query.length < 2) {
-        dropdown.hide().html('');
-        return;
-      }
+        const barcode = $(this).val().trim();
 
-      $.ajax({
-        url: 'get_products.php',
-        method: 'POST',
-        data: {
-          query: query
-        },
-        success: function(data) {
-          if (data.trim() !== "") {
-            dropdown.html(data);
-            dropdown.show();
-          } else {
-            dropdown.hide().html('');
-          }
+        if (barcode === '') {
+          return;
         }
-      });
+
+        // Rechercher le produit par code
+        searchProductByCode(barcode);
+
+        // Vider le champ
+        $(this).val('');
+      }
     });
 
-    // 2. Gestion de la sélection dans le dropdown (Scan/Sélection)
-    $(document).on('click', '.productDropdown li', function() {
-      var selected_li = $(this);
-      var tr = selected_li.closest('tr');
-      var productId = selected_li.data('product-id');
-
-      tr.find('.productDropdown').hide();
-
+    // ========================================
+    // FONCTION : Recherche produit par code
+    // ========================================
+    function searchProductByCode(code) {
       $.ajax({
-        url: "get_product.php",
-        method: "get",
-        dataType: "json",
+        url: 'get_product_by_code.php',
+        method: 'POST',
+        dataType: 'json',
         data: {
-          id: productId
+          code: code
         },
         success: function(data) {
-          if (data && data["product_id"]) {
-
-            var already_added = false;
-            $('#myOrder tbody tr:not(.input-row)').each(function() {
-              if ($(this).find('.productid').val() == productId) {
-                update_existing_row($(this), data);
-                already_added = true;
-                tr.remove();
-
-                // ✅ CORRECTION 2 : Ajouter la nouvelle ligne de saisie automatique
-                add_new_row();
-
-                return false;
-              }
-            });
-
-            if (!already_added) {
-              tr.find('.productSearch').val(data["product_code"] + ' - ' + data["product_name"]);
-              populate_new_row(tr, data);
-            }
+          if (data && data.product_id) {
+            addOrUpdateProduct(data);
           } else {
-            swal("Erreur", "Produit introuvable.", "error");
+            // Produit non trouvé - son d'erreur et alerte
+            playErrorSound();
+            showNotification('❌ Produit non trouvé: ' + code, 'error');
           }
         },
         error: function() {
-          swal("Erreur", "Erreur de communication avec le serveur pour les détails du produit.", "error");
+          playErrorSound();
+          showNotification('⚠️ Erreur de communication avec le serveur', 'error');
         }
-      })
+      });
+    }
+
+    // ========================================
+    // FONCTION : Ajouter ou mettre à jour produit
+    // ========================================
+    function addOrUpdateProduct(data) {
+      const productId = data.product_id;
+      let existingRow = null;
+
+      // Vérifier si le produit existe déjà
+      $('#myOrder tbody tr').each(function() {
+        if ($(this).find('.productid').val() == productId) {
+          existingRow = $(this);
+          return false;
+        }
+      });
+
+      if (existingRow) {
+        // Produit existe - incrémenter la quantité
+        updateExistingProduct(existingRow, data);
+      } else {
+        // Nouveau produit - ajouter une ligne
+        addNewProduct(data);
+      }
+
+      // Son de succès
+      playSuccessSound();
+
+      // Remettre le focus sur le scanner
+      setTimeout(function() {
+        $('#barcodeScanner').focus();
+      }, 100);
+    }
+
+    // ========================================
+    // FONCTION : Mettre à jour produit existant
+    // ========================================
+    function updateExistingProduct(row, data) {
+      const currentQty = parseInt(row.find('.quantity_product').val()) || 0;
+      const maxStock = parseInt(row.find('.productstock').val()) || 0;
+      let newQty = currentQty + 1;
+
+      if (newQty > maxStock) {
+        if (currentQty < maxStock) {
+          newQty = maxStock;
+          showNotification('⚠️ Quantité ajustée au stock max (' + maxStock + ')', 'warning');
+        } else {
+          playErrorSound();
+          showNotification('❌ Stock insuffisant pour ' + data.product_name, 'error');
+          return;
+        }
+      }
+
+      // Highlight temporaire
+      row.addClass('product-row-highlight');
+      setTimeout(function() {
+        row.removeClass('product-row-highlight');
+      }, 800);
+
+      row.find('.quantity_product').val(newQty).trigger('change');
+      showNotification('✅ Quantité mise à jour: ' + data.product_name + ' (x' + newQty + ')', 'success');
+    }
+
+    // ========================================
+    // FONCTION : Ajouter nouveau produit
+    // ========================================
+    function addNewProduct(data) {
+      const html = `
+      <tr class="product-row-highlight">
+        <input type="hidden" class="productid" name="productid[]" value="${data.product_id}">
+        <input type="hidden" class="productstock" name="productstock[]" value="${data.stock}">
+        <input type="hidden" class="minstock" name="minstock[]" value="${data.min_stock}">
+        
+        <td><input type="text" class="form-control productcode" name="productcode[]" value="${data.product_code}" readonly></td>
+        <td><input type="text" class="form-control productname" name="productname[]" value="${data.product_name}" readonly></td>
+        <td><span class="badge badge-info">${data.stock}</span></td>
+        <td><input type="text" class="form-control productprice" name="productprice[]" value="${data.sell_price}" style="width:100px;"></td>
+        <td><input type="text" class="form-control productmin" name="productmin[]" value="${data.min_price}" readonly style="width:100px;"></td>
+        <td><input type="text" class="form-control discount" name="discount[]" value="${data.discount}" style="width:70px;"></td>
+        <td><input type="text" class="form-control remise" name="productremise[]" value="0" readonly style="width:90px;"></td>
+        <td><input type="number" min="1" class="form-control quantity_product" name="quantity[]" value="1" style="width:90px;"></td>
+        <td><input type="text" class="form-control productsatuan" name="productsatuan[]" value="${data.product_satuan}" readonly style="width:60px;"></td>
+        <td><input type="text" class="form-control producttotal" name="producttotal[]" value="0" readonly style="width:120px;"></td>
+        <td><button type="button" class="btn btn-danger btn-sm btn-remove"><i class="fa fa-times"></i></button></td>
+      </tr>
+    `;
+
+      $('#myOrder tbody').append(html);
+
+      // Calculer le total pour cette ligne
+      const newRow = $('#myOrder tbody tr:last');
+      newRow.find('.quantity_product').trigger('change');
+
+      // Retirer le highlight après animation
+      setTimeout(function() {
+        newRow.removeClass('product-row-highlight');
+      }, 800);
+
+      showNotification('✅ Produit ajouté: ' + data.product_name, 'success');
+      updateStats();
+    }
+
+    // ========================================
+    // FONCTION : Calculs et gestion quantité/prix
+    // ========================================
+    $(document).on('keyup change', '.quantity_product, .productprice, .discount', function() {
+      const tr = $(this).closest('tr');
+      let quantity = parseInt(tr.find('.quantity_product').val()) || 0;
+      const price = parseFloat(tr.find('.productprice').val()) || 0;
+      const discount_rate = parseFloat(tr.find('.discount').val()) / 100 || 0;
+      const max_stock = parseInt(tr.find('.productstock').val()) || 0;
+      const min_price = parseFloat(tr.find('.productmin').val()) || 0;
+
+      // Validation stock
+      if (quantity > max_stock) {
+        quantity = max_stock;
+        tr.find('.quantity_product').val(quantity);
+        showNotification('⚠️ Quantité limitée au stock disponible', 'warning');
+      }
+
+      if (quantity < 1) {
+        quantity = 1;
+        tr.find('.quantity_product').val(quantity);
+      }
+
+      // Validation prix minimum
+      if (price < min_price) {
+        showNotification('❌ Prix inférieur au prix minimum (' + min_price + ')', 'error');
+        tr.find('.productprice').css('border-color', 'red');
+      } else {
+        tr.find('.productprice').css('border-color', '');
+      }
+
+      // Calculs
+      const total_net = (1 - discount_rate) * quantity * price;
+      const remise_val = discount_rate * quantity * price;
+
+      tr.find('.producttotal').val(total_net.toFixed(2));
+      tr.find('.remise').val(remise_val.toFixed(2));
+
+      calculate(parseFloat($('#paid').val()));
+      updateStats();
     });
 
-    // 3. Suppression d'une ligne
+    // ========================================
+    // FONCTION : Suppression produit
+    // ========================================
     $(document).on('click', '.btn-remove', function() {
       $(this).closest('tr').remove();
-      calculate(parseFloat($("#paid").val()));
-    })
+      calculate(parseFloat($('#paid').val()));
+      updateStats();
+      showNotification('🗑️ Produit retiré du panier', 'info');
+    });
 
-    // 4. Gestion de la quantité, prix et remise par ligne
-    $("#myOrder").delegate(".quantity_product, .productprice, .discount", "keyup change", function() {
-      var tr = $(this).closest('tr');
-      var quantity = parseInt(tr.find(".quantity_product").val()) || 0;
-      var price = parseFloat(tr.find(".productprice").val()) || 0;
-      var discount_rate = parseFloat(tr.find(".discount").val()) / 100 || 0;
-      var max_stock = parseInt(tr.find(".productstock").val()) || 0;
-
-      if (quantity > max_stock) {
-        swal("Warning", "Stock Insuffisant pour ce produit. Max: " + max_stock, "warning");
-        quantity = max_stock;
-        tr.find(".quantity_product").val(quantity);
-      }
-      if (quantity < 0) {
-        quantity = 1;
-        tr.find(".quantity_product").val(quantity);
-      }
-
-      var total_net_produit = (1 - discount_rate) * quantity * price;
-      var remise_val_produit = discount_rate * quantity * price;
-
-      tr.find(".producttotal").val(total_net_produit.toFixed(2));
-      tr.find(".remise").val(remise_val_produit.toFixed(2));
-
-      calculate(parseFloat($("#paid").val()));
-
-      if ($(this).hasClass('productprice')) {
-        var min_price = parseFloat(tr.find(".productmin").val()) || 0;
-        if (price < min_price) {
-          swal("Warning", "Erreur : Le prix de vente doit être supérieur ou égal au prix minimum (" + min_price + ").", "warning");
-        }
+    // ========================================
+    // FONCTION : Vider tout le panier
+    // ========================================
+    $('#clearAllBtn').on('click', function() {
+      if (confirm('Voulez-vous vraiment vider tout le panier ?')) {
+        $('#myOrder tbody').empty();
+        calculate(0);
+        updateStats();
+        $('#barcodeScanner').focus();
+        showNotification('🗑️ Panier vidé', 'info');
       }
     });
 
-    // 5. Fonction de calcul globale
-    /**
-     * Calcule les totaux de la commande, y compris la TVA (Taxe sur la valeur ajoutée) et la remise.
-     * * Hypothèses de l'utilisateur:
-     * 1. La valeur dans .producttotal est le prix net final APRES remise.
-     * 2. La TVA est incluse AVANT la remise (ce qui suggère qu'elle fait partie du prix unitaire de base).
-     * 3. Nous allons DÉDUIRE la TVA pour trouver le HT à partir du TTC total si nécessaire.
-     */
+    // ========================================
+    // FONCTION : Calcul des totaux
+    // ========================================
     function calculate(paid) {
-      // 1. Initialiser les totaux
-      var total_net_apres_remise = 0; // Somme des .producttotal (Montant total TTC dû APRES remise)
-      var total_remise_valeur = 0; // Somme des .remise (Montant total de la remise)
-      var tva_rate = 0.1925; // Taux de TVA (19.25%)
+      let total_net_apres_remise = 0;
+      let total_remise_valeur = 0;
+      const tva_rate = 0.1925;
 
-      // 2. Calculer le total net TTC après remise
-      $(".producttotal").each(function() {
-        // total_net_apres_remise est le total TTC DÛ (après remise)
+      $('.producttotal').each(function() {
         total_net_apres_remise += (parseFloat($(this).val()) || 0);
       });
 
-      // 3. Calculer le total de la remise
-      $(".remise").each(function() {
+      $('.remise').each(function() {
         total_remise_valeur += (parseFloat($(this).val()) || 0);
       });
 
-      // 4. Calculer le Total TTC AVANT remise (cela inclut la TVA)
-      // C'est le montant qui aurait été dû sans la remise.
-      var total_ttc_avant_remise = total_net_apres_remise + total_remise_valeur;
+      const total_ttc_avant_remise = total_net_apres_remise + total_remise_valeur;
+      const total_ht_avant_tva = total_ttc_avant_remise / (1 + tva_rate);
+      const tva = total_ttc_avant_remise - total_ht_avant_tva;
+      const total_ttc_a_payer = total_net_apres_remise;
+      const due = (parseFloat(paid) || 0) - total_ttc_a_payer;
 
-      // 5. Calculer le Total HT AVANT TVA (Total Hors Taxe, avant remise)
-      // Nous déduisons la TVA du total TTC avant remise pour trouver le HT.
-      // TTC = HT * (1 + tva_rate)  =>  HT = TTC / (1 + tva_rate)
-      var total_ht_avant_tva = total_ttc_avant_remise / (1 + tva_rate);
+      $('#thetotal').val(total_ht_avant_tva.toFixed(2));
+      $('#remise').val(total_remise_valeur.toFixed(2));
+      $('#tva').val(tva.toFixed(2));
+      $('#total').val(total_ttc_a_payer.toFixed(2));
+      $('#due').val(due.toFixed(2));
 
-      // 6. Calculer le Montant de la TVA (sur le total TTC avant remise)
-      // TVA = TTC - HT
-      var tva = total_ttc_avant_remise - total_ht_avant_tva;
-
-      // Le montant final à payer (TTC) est déjà total_net_apres_remise
-      var total_ttc_a_payer = total_net_apres_remise;
-      var total_ttc_a_payer_fixe = total_ttc_a_payer.toFixed(2);
-
-
-      // 7. Calculer le 'Reste à payer' (Due)
-      // Assurez-vous que 'paid' est bien un nombre.
-      var due = (parseFloat(paid) || 0) - total_ttc_a_payer;
-
-      // 8. Mettre à jour les champs
-      // Note: Utiliser le total HT (avant TVA et remise) pour #thetotal
-      $("#thetotal").val(total_ht_avant_tva.toFixed(2));
-      $("#remise").val(total_remise_valeur.toFixed(2));
-      $("#tva").val(tva.toFixed(2));
-      $("#total").val(total_ttc_a_payer_fixe); // Total TTC Final (APRES remise)
-      $("#due").val(due.toFixed(2));
-
-      // 9. 🛑 Vérification de l'argent reçu (logique inchangée)
-      if ((parseFloat(paid) || 0) < parseFloat(total_ttc_a_payer_fixe)) {
-        $("#paid").css('border-color', 'red');
-        $("#saveOrderBtn").prop('disabled', true);
+      // Validation paiement
+      if ((parseFloat(paid) || 0) < parseFloat(total_ttc_a_payer.toFixed(2))) {
+        $('#paid').css('border-color', 'red');
+        $('#saveOrderBtn').prop('disabled', true);
       } else {
-        $("#paid").css('border-color', ''); // Réinitialiser la couleur
-        $("#saveOrderBtn").prop('disabled', false);
+        $('#paid').css('border-color', '');
+        $('#saveOrderBtn').prop('disabled', false);
       }
     }
 
-    // 6. Gestion du paiement (Argent reçu)
-    $("#paid").keyup(function() {
-      var paid = parseFloat($(this).val()) || 0;
+    // ========================================
+    // FONCTION : Mise à jour statistiques
+    // ========================================
+    function updateStats() {
+      const itemCount = $('#myOrder tbody tr').length;
+      let totalUnits = 0;
+
+      $('.quantity_product').each(function() {
+        totalUnits += parseInt($(this).val()) || 0;
+      });
+
+      $('#itemCount').text(itemCount + ' article' + (itemCount > 1 ? 's' : ''));
+      $('#totalItems').text(totalUnits + ' unité' + (totalUnits > 1 ? 's' : ''));
+    }
+
+    // ========================================
+    // FONCTION : Notifications
+    // ========================================
+    function showNotification(message, type) {
+      const bgColor = {
+        'success': '#28a745',
+        'error': '#dc3545',
+        'warning': '#ffc107',
+        'info': '#17a2b8'
+      };
+
+      const notification = $('<div>')
+        .css({
+          position: 'fixed',
+          top: '20px',
+          right: '20px',
+          padding: '15px 25px',
+          backgroundColor: bgColor[type] || '#333',
+          color: 'white',
+          borderRadius: '5px',
+          zIndex: 9999,
+          boxShadow: '0 4px 6px rgba(0,0,0,0.3)',
+          fontWeight: 'bold',
+          minWidth: '300px'
+        })
+        .text(message)
+        .appendTo('body')
+        .fadeIn(300);
+
+      setTimeout(function() {
+        notification.fadeOut(300, function() {
+          $(this).remove();
+        });
+      }, 3000);
+    }
+
+    // ========================================
+    // FONCTION : Sons
+    // ========================================
+    function playSuccessSound() {
+      // Son de succès (optionnel - nécessite fichier audio)
+      // const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBTGH0fPTgjMGHm7A7+OZUQ0PVKzn77BdGAk+ltryxnMpBSuAzvLZiTYIG2m98OScTgwPUKXh8bllHAU4jtfzyn0tBSh+y/DcjkELFF+08OyrWBYKRZ3e8sFuJAUxhtHz1YU2Bhxqvu7mnFEOD1Gp5O+zYBoJPJPY88p2KwYvf8rx24xACBVgsO7oqlYUCkSb3PLDcSYFMYXQ8taGNQYbal/u5p5SDQ9Qpt/xuWUdBTiO1vPKfywEKH3K8N2RQwwSXbfv66xbGQlDmtvyxXQrBS5+zPHajUIIFWGu7uipVRYKRJvb88N1LAUxhdHz1YY2Bhxpvu3mnVIND1Cm3/G5ZRsFOI/Y88p+LQQogcjw3I9FCRVfsvDrsV8bCkOY2PXEdiwGLn3J8dqORAcVYa7t6KpXFgpFm9rxw3YsBTGF0PPVhzUGHGq+7OadUw4OUKXd8blnHgU4j9fzzH4tBCh+yPDcj0YKFV6v7+uxYRwKQ5jW88Z2LAYuf8rx24xBBxVgrOrpq1oXCkSa2fHDeywGMYXN8teINgYcaLvs5pxSDg5Pps/wuWgfBTiP1vPMfi0EKH7I8N2RQgsVXrLu67JjGglDl9Twxnkrhi5+yPHajUIIFWGu7OirWhgJRJnY8cN3LAcxhcvz2Ig2BRxovOvlnFMPDk+jze+6aR8GN43U8sz+LQUpfsjw3Y9ECxVfsOzqsmIdCUOW0u/HeiuGLn/K8duNRAgVYa3r6axbFwpEldjxw3ksByiBxvPZiTUFHGm96+SbUxAOTqHM7rpqIQc2jdTxxn4tBSl+x/DdkEQMFF6v7OqyYhwJQ5XQ7sd7K4YufsvQ241DCBVgrOrpq1wXCUSa2vHDei0HKoHE8tmKNQUcab3r5ZtUEA5NoMrsumoiBjaNzfHGfywFKX/I8d2QRQsUXq/r6rNiHAlDlM/tx3sshy1+y/DbjkQJFWCr6+usXBgJRZrZ88N6LQYqgsLy2Yk2BRxpv+vkm1UQDL6iye26ax8GNY3M8cb+LAUpf8jw3ZBFDBVeruvqtGQdCUKUzu3HfC2HL37M8NyNRQgUYKrq66tcGApFmtj0w3suBiqCwPPaiTUFG2q/6+SbVhEMTaHI7LtrIAY1jc3xxn8sByqAx/HdkEYMFF6u6+q0ZB0JQpPM7cd8LYYufszw3I5FCBRgqenrq10ZCkaZ1/PDey4HKoHA89qKNgUbab/r5JxWEAxNoMjrumsfBzSNzfDFfywHKoDH8d2RRgsUXq7r6rRlHglCks/ux30thS5+zPDdjUUIFGCp6euqXhoJRprX88N8LggqgsDy2Yo1BRtqv+vknFYRDE2gx+y6ax8HNIzM8MV/LQcqf8jw3pFGDRNdrevqtGUeCkKSzu3HfS2GLn7M8N2NRwcUYKjo66teGQlGmdfzw34uByqCv/LZizUEG2q+6uOcVxEMTKDH6rpsIQczi8zwxH8tByp/x+/ekUYNE12t6+q0Zh4KQpLO7cd9LYYufszw3Y5HBxRgqefrqV8aCUaZ1vPDfi4HKoK/8tqLNAQbarvq45xYEgxMoMfquW0iBzOMzPDEfy4HKn7H79yRRg0TXazr6rRmHwpBkc7sx3wvhy9+y/DdjkcHFF+o5uupYBoKRZjV88N/LwcqgrLy2Ys0BBtp vurjnVgSDEyfxuq5bSMHM4vL8MN/LwcrfsTv3JFHDBNerOvqtGcfCkGRzuvIey+HL3/L8N6OSQcUXqfl66lgGwtFlND0xH8tByu Cvu3Tay4JI37L8NySRw0SXazr6rRnHwpBkM3qx3wvhy5/zPDejkgIF16r5+ylYRwMRZLP8sR/LQcsgrvx2owzBBpp++rhni");
+      // audio.play().catch(e => console.log('Audio play failed'));
+    }
+
+    function playErrorSound() {
+      // Son d'erreur - utiliser Web Audio API pour générer un bip d'erreur
+      try {
+        const audioContext = new(window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        oscillator.frequency.value = 400;
+        oscillator.type = 'sine';
+        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + 0.3);
+      } catch (e) {
+        console.log('Audio play failed');
+      }
+    }
+
+    // ========================================
+    // GESTION PAIEMENT
+    // ========================================
+    $('#paid').on('keyup change', function() {
+      const paid = parseFloat($(this).val()) || 0;
       calculate(paid);
     });
 
-    // 7. 🛑 NOUVEAUTÉ : Validation finale lors de la soumission du formulaire
-    $('#orderForm').on('submit', function(e) {
-      var totalTTC = parseFloat($("#total").val()) || 0;
-      var paidAmount = parseFloat($("#paid").val()) || 0;
+    // ========================================
+    // RACCOURCIS CLAVIER
+    // ========================================
+    $(document).on('keydown', function(e) {
+      // F2 - Focus sur scanner
+      if (e.key === 'F2') {
+        e.preventDefault();
+        $('#barcodeScanner').focus();
+      }
 
-      // S'assurer que le calcul est à jour avant la soumission
+      // F9 - Sauvegarder commande
+      if (e.key === 'F9') {
+        e.preventDefault();
+        if (!$('#saveOrderBtn').prop('disabled')) {
+          if (confirm('Êtes-vous sûr de vouloir enregistrer cette transaction ?')) {
+            $('#orderForm').submit();
+          }
+        }
+      }
+
+      // ESC - Annuler et retour au scanner
+      if (e.key === 'Escape') {
+        $('#barcodeScanner').focus();
+      }
+    });
+
+    // ========================================
+    // VALIDATION FORMULAIRE
+    // ========================================
+    $('#orderForm').on('submit', function(e) {
+      const totalTTC = parseFloat($('#total').val()) || 0;
+      const paidAmount = parseFloat($('#paid').val()) || 0;
+      const itemCount = $('#myOrder tbody tr').length;
+
+      if (itemCount === 0) {
+        e.preventDefault();
+        swal('Erreur', 'Aucun produit dans le panier.', 'error');
+        return false;
+      }
+
       calculate(paidAmount);
 
       if (paidAmount < totalTTC) {
-        e.preventDefault(); // Empêcher l'envoi du formulaire
-        swal("Erreur de Paiement", "Le montant d'argent reçu (" + paidAmount.toFixed(2) + " FCFA) est inférieur au total TTC à payer (" + totalTTC.toFixed(2) + " FCFA). Veuillez ajuster le montant reçu.", "error");
-        $("#paid").focus();
+        e.preventDefault();
+        swal('Erreur de Paiement', 'Le montant d\'argent reçu (' + paidAmount.toFixed(2) + ' FCFA) est inférieur au total TTC à payer (' + totalTTC.toFixed(2) + ' FCFA). Veuillez ajuster le montant reçu.', 'error');
+        $('#paid').focus();
         return false;
       }
-      return true; // Continuer la soumission si la vérification est OK
+
+      return true;
     });
 
+    // ========================================
+    // INITIALISATION
+    // ========================================
+    calculate(0);
+    updateStats();
+    $('#barcodeScanner').focus();
 
-    // Initialisation au chargement de la page
-    if ($('#myOrder tbody tr').length === 0) {
-      add_new_row();
-    }
-    // Appel initial pour s'assurer que le bouton est désactivé si le total est > 0 et paid = 0
-    calculate(parseFloat($("#paid").val()));
+    // Garder le focus sur le scanner
+    setInterval(function() {
+      if (!$(':focus').is('input[type="number"], #paid, #paymentMode, #clientSelect')) {
+        $('#barcodeScanner').focus();
+      }
+    }, 2000);
 
   });
 </script>
