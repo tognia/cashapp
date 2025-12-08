@@ -178,25 +178,13 @@ if (isset($_POST['save_order'])) {
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   }
 
-  .input-wrapper {
-    position: relative;
-    margin-bottom: 15px;
-  }
-
   .scanner-input-wrapper {
-    max-width: 48%;
-    display: inline-block;
-    margin-right: 2%;
+    position: relative;
+    max-width: 600px;
+    margin: 0 auto;
   }
 
-  .search-input-wrapper {
-    max-width: 48%;
-    display: inline-block;
-    margin-left: 2%;
-  }
-
-  #barcodeScanner,
-  #manualSearch {
+  #barcodeScanner {
     width: 100%;
     padding: 15px 50px 15px 15px;
     font-size: 18px;
@@ -206,15 +194,14 @@ if (isset($_POST['save_order'])) {
     transition: all 0.3s ease;
   }
 
-  #barcodeScanner:focus,
-  #manualSearch:focus {
+  #barcodeScanner:focus {
     outline: none;
     border-color: #ffd700;
     box-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
     transform: scale(1.02);
   }
 
-  .input-icon {
+  .scanner-icon {
     position: absolute;
     right: 15px;
     top: 50%;
@@ -236,11 +223,11 @@ if (isset($_POST['save_order'])) {
     }
   }
 
-  .input-label {
+  .scanner-label {
     color: white;
-    font-size: 14px;
+    font-size: 16px;
     font-weight: bold;
-    margin-bottom: 8px;
+    margin-bottom: 10px;
     display: block;
     text-align: center;
   }
@@ -276,114 +263,40 @@ if (isset($_POST['save_order'])) {
     margin: 0 5px;
     font-weight: bold;
   }
-
-  /* Dropdown de recherche */
-  .search-dropdown {
-    position: absolute;
-    z-index: 1000;
-    background-color: white;
-    border: 2px solid #667eea;
-    border-radius: 8px;
-    max-height: 300px;
-    overflow-y: auto;
-    width: 100%;
-    top: 100%;
-    margin-top: 5px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    display: none;
-  }
-
-  .search-dropdown ul {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-  }
-
-  .search-dropdown li {
-    padding: 12px 15px;
-    cursor: pointer;
-    border-bottom: 1px solid #eee;
-    transition: background 0.2s;
-  }
-
-  .search-dropdown li:hover {
-    background-color: #f0f0ff;
-  }
-
-  .search-dropdown li:last-child {
-    border-bottom: none;
-  }
-
-  .product-code-highlight {
-    font-weight: bold;
-    color: #667eea;
-  }
-
-  .product-name-highlight {
-    color: #333;
-  }
-
-  .stock-badge {
-    float: right;
-    background: #28a745;
-    color: white;
-    padding: 2px 8px;
-    border-radius: 10px;
-    font-size: 12px;
-  }
-
-  @media (max-width: 768px) {
-
-    .scanner-input-wrapper,
-    .search-input-wrapper {
-      max-width: 100%;
-      display: block;
-      margin: 10px 0;
-    }
-  }
 </style>
 
 <div class="content-wrapper">
   <section class="content-header">
     <h1>
-      🛒 Transaction Caisse - Mode Scanner & Recherche
+      🛒 Transaction Caisse - Mode Scanner
     </h1>
     <hr>
   </section>
 
   <section class="content container-fluid">
 
-    <!-- SECTION SCANNER & RECHERCHE -->
     <div class="scanner-section">
-      <div class="scanner-input-wrapper input-wrapper">
-        <label class="input-label">
-          📱 SCANNER CODE-BARRE
-        </label>
-        <input
-          type="text"
-          id="barcodeScanner"
-          placeholder="Scannez le code produit..."
-          autocomplete="off"
-          autofocus>
-        <i class="fa fa-barcode input-icon"></i>
-      </div>
+      <div class="row">
+        <div class="col-md-5">
+          <label class="scanner-label">📱 SCANNER CODE-BARRE</label>
+          <div class="scanner-input-wrapper">
+            <input type="text" id="barcodeScanner" placeholder="Scannez ici..." autocomplete="off" autofocus>
+            <i class="fa fa-barcode scanner-icon"></i>
+          </div>
+        </div>
 
-      <div class="search-input-wrapper input-wrapper">
-        <label class="input-label">
-          🔍 RECHERCHE MANUELLE
-        </label>
-        <input
-          type="text"
-          id="manualSearch"
-          placeholder="Tapez le nom ou code produit..."
-          autocomplete="off">
-        <i class="fa fa-search input-icon"></i>
-        <div class="search-dropdown" id="searchDropdown"></div>
-      </div>
+        <div class="col-md-2 text-center" style="margin-top: 30px;">
+          <span class="badge" style="background: rgba(255,255,255,0.3)">OU</span>
+        </div>
 
-      <div style="text-align: center; margin-top: 15px; clear: both;">
-        <span class="stats-badge" id="itemCount">0 articles</span>
-        <span class="stats-badge" id="totalItems">0 unités</span>
+        <div class="col-md-5">
+          <label class="scanner-label">🔍 RECHERCHE PAR NOM</label>
+          <div class="scanner-input-wrapper">
+            <select id="manualSearch" class="form-control" style="width: 100%;">
+              <option value="">Chercher un produit...</option>
+            </select>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -542,10 +455,11 @@ if (isset($_POST['save_order'])) {
 <script>
   $(document).ready(function() {
 
-    let searchTimeout;
+    let scanTimeout;
+    let currentEditingRow = null;
 
     // ========================================
-    // SCANNER CODE-BARRE (Recherche exacte rapide)
+    // FONCTION : Scanner de code-barre
     // ========================================
     $('#barcodeScanner').on('keypress', function(e) {
       if (e.which === 13) { // Touche Entrée
@@ -557,7 +471,7 @@ if (isset($_POST['save_order'])) {
           return;
         }
 
-        // Rechercher le produit par code exact
+        // Rechercher le produit par code
         searchProductByCode(barcode);
 
         // Vider le champ
@@ -565,40 +479,60 @@ if (isset($_POST['save_order'])) {
       }
     });
 
-    // ========================================
-    // RECHERCHE MANUELLE (Autocomplétion)
-    // ========================================
-    $('#manualSearch').on('keyup', function(e) {
-      const query = $(this).val().trim();
-
-      // Si touche Entrée et un seul résultat, l'ajouter
-      if (e.which === 13 && $('#searchDropdown li').length === 1) {
-        $('#searchDropdown li').first().click();
-        return;
-      }
-
-      // Si moins de 2 caractères, masquer le dropdown
-      if (query.length < 2) {
-        $('#searchDropdown').hide().html('');
-        return;
-      }
-
-      // Debounce pour éviter trop de requêtes
-      clearTimeout(searchTimeout);
-      searchTimeout = setTimeout(function() {
-        searchProductsByQuery(query);
-      }, 300);
-    });
-
-    // Masquer dropdown si on clique ailleurs
-    $(document).on('click', function(e) {
-      if (!$(e.target).closest('#manualSearch, #searchDropdown').length) {
-        $('#searchDropdown').hide();
+    // Initialisation de Select2 pour la recherche manuelle
+    $('#manualSearch').select2({
+      placeholder: 'Tapez le nom du produit...',
+      minimumInputLength: 2,
+      allowClear: true,
+      ajax: {
+        url: 'search_product_manual.php',
+        dataType: 'json',
+        delay: 250,
+        data: function(params) {
+          return {
+            q: params.term
+          };
+        },
+        processResults: function(data) {
+          return {
+            results: $.map(data, function(item) {
+              return {
+                text: item.product_code + ' - ' + item.product_name,
+                id: item.product_code,
+                full_data: item
+              };
+            })
+          };
+        }
       }
     });
 
+    // Action lors du clic sur un produit trouvé
+    $('#manualSearch').on('select2:select', function(e) {
+      addOrUpdateProduct(e.params.data.full_data);
+      $(this).val(null).trigger('change'); // Vide le champ après sélection
+      $('#barcodeScanner').focus(); // Retourne au scanner
+    });
+
+    // Déclencheur lors de la sélection d'un produit dans la liste
+    $('#manualSearch').on('select2:select', function(e) {
+      var data = e.params.data.full_data;
+
+      // Appelle la fonction existante pour ajouter au panier
+      addOrUpdateProduct(data);
+
+      // Réinitialise le champ de recherche pour la transaction suivante
+      $(this).val(null).trigger('change');
+
+      // Remet le focus sur le scanner pour la rapidité
+      $('#barcodeScanner').focus();
+    });
+
+
+
+
     // ========================================
-    // FONCTION : Recherche par code exact (scanner)
+    // FONCTION : Recherche produit par code
     // ========================================
     function searchProductByCode(code) {
       $.ajax({
@@ -611,76 +545,18 @@ if (isset($_POST['save_order'])) {
         success: function(data) {
           if (data && data.product_id) {
             addOrUpdateProduct(data);
-            $('#barcodeScanner').focus();
           } else {
+            // Produit non trouvé - son d'erreur et alerte
             playErrorSound();
             showNotification('❌ Produit non trouvé: ' + code, 'error');
-            $('#barcodeScanner').focus();
           }
         },
         error: function() {
           playErrorSound();
           showNotification('⚠️ Erreur de communication avec le serveur', 'error');
-          $('#barcodeScanner').focus();
         }
       });
     }
-
-    // ========================================
-    // FONCTION : Recherche par nom/code (manuelle)
-    // ========================================
-    function searchProductsByQuery(query) {
-      $.ajax({
-        url: 'get_products.php',
-        method: 'POST',
-        data: {
-          query: query
-        },
-        success: function(response) {
-          if (response.trim() !== '') {
-            $('#searchDropdown').html(response).show();
-          } else {
-            $('#searchDropdown').html('<ul class="list-unstyled" style="padding: 10px;"><li style="color: #999;">Aucun produit trouvé</li></ul>').show();
-          }
-        },
-        error: function() {
-          $('#searchDropdown').hide();
-        }
-      });
-    }
-
-    // ========================================
-    // FONCTION : Sélection dans le dropdown
-    // ========================================
-    $(document).on('click', '#searchDropdown li', function() {
-      const productId = $(this).data('product-id');
-
-      if (!productId) return;
-
-      $('#searchDropdown').hide();
-      $('#manualSearch').val('');
-
-      // Récupérer les détails du produit
-      $.ajax({
-        url: 'get_product.php',
-        method: 'GET',
-        dataType: 'json',
-        data: {
-          id: productId
-        },
-        success: function(data) {
-          if (data && data.product_id) {
-            addOrUpdateProduct(data);
-            $('#barcodeScanner').focus(); // Retour au scanner
-          } else {
-            showNotification('❌ Erreur lors de la récupération du produit', 'error');
-          }
-        },
-        error: function() {
-          showNotification('⚠️ Erreur de communication', 'error');
-        }
-      });
-    });
 
     // ========================================
     // FONCTION : Ajouter ou mettre à jour produit
@@ -698,12 +574,20 @@ if (isset($_POST['save_order'])) {
       });
 
       if (existingRow) {
+        // Produit existe - incrémenter la quantité
         updateExistingProduct(existingRow, data);
       } else {
+        // Nouveau produit - ajouter une ligne
         addNewProduct(data);
       }
 
+      // Son de succès
       playSuccessSound();
+
+      // Remettre le focus sur le scanner
+      setTimeout(function() {
+        $('#barcodeScanner').focus();
+      }, 100);
     }
 
     // ========================================
@@ -725,6 +609,7 @@ if (isset($_POST['save_order'])) {
         }
       }
 
+      // Highlight temporaire
       row.addClass('product-row-highlight');
       setTimeout(function() {
         row.removeClass('product-row-highlight');
@@ -1023,11 +908,21 @@ if (isset($_POST['save_order'])) {
     $('#barcodeScanner').focus();
 
     // Garder le focus sur le scanner
+    // Correction : Garder le focus sur le scanner SEULEMENT si on n'est pas en train de taper ailleurs
+    // Correction : Garder le focus sur le scanner SAUF si on tape ailleurs
     setInterval(function() {
-      if (!$(':focus').is('input[type="number"], #paid, #paymentMode, #clientSelect')) {
+      var activeElement = document.activeElement;
+
+      // On vérifie si l'utilisateur est sur un champ de saisie
+      var isInputActive = activeElement.tagName === 'INPUT' ||
+        activeElement.tagName === 'SELECT' ||
+        $(activeElement).hasClass('select2-search__field'); // IMPORTANT pour Select2
+
+      // Si on ne tape rien ailleurs, on remet le focus sur le scanner
+      if (!isInputActive) {
         $('#barcodeScanner').focus();
       }
-    }, 2000);
+    }, 1500);
 
   });
 </script>

@@ -275,12 +275,6 @@ if (isset($_POST['save_order'])) {
 
   <section class="content container-fluid">
 
-    <div class="form-group">
-      <label>Recherche manuelle</label>
-      <select id="manualSelect" class="form-control">
-        <option value="">-- Sélectionner un produit --</option>
-      </select>
-    </div>
 
 
     <!-- SECTION SCANNER -->
@@ -482,35 +476,6 @@ if (isset($_POST['save_order'])) {
       }
     });
 
-    // Charger la liste des produits
-    $.ajax({
-      url: "get_all_products.php",
-      method: "GET",
-      dataType: "json",
-      success: function(data) {
-        data.forEach(function(p) {
-          $("#manualSelect").append(
-            `<option value="${p.product_code}">${p.product_code} – ${p.product_name}</option>`
-          );
-        });
-      }
-    });
-
-    // Lorsqu’un produit est sélectionné
-    $("#manualSelect").on("change", function() {
-      const code = $(this).val();
-      if (!code) return;
-
-      // Insère le code dans le champ scanner
-      $("#barcodeScanner").val(code);
-
-      // Déclenche le même comportement que le scan
-      $("#barcodeScanner").trigger("keyup");
-
-      // Réinitialise le select pour éviter une confusion
-      $(this).val("");
-    });
-
     // ========================================
     // FONCTION : Recherche produit par code
     // ========================================
@@ -598,8 +563,6 @@ if (isset($_POST['save_order'])) {
       row.find('.quantity_product').val(newQty).trigger('change');
       showNotification('✅ Quantité mise à jour: ' + data.product_name + ' (x' + newQty + ')', 'success');
     }
-
-
 
     // ========================================
     // FONCTION : Ajouter nouveau produit
@@ -894,7 +857,7 @@ if (isset($_POST['save_order'])) {
       if (!$(':focus').is('input[type="number"], #paid, #paymentMode, #clientSelect')) {
         $('#barcodeScanner').focus();
       }
-    }, 200000);
+    }, 2000);
 
   });
 </script>
