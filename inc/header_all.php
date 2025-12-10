@@ -5,20 +5,22 @@
   <meta charset="utf-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
 
-  <title>Cash_Soft | BEVILEC</title>
-  <!-- Tell the browser to be responsive to screen width -->
+  <title>CASHSOFT | Dashboard</title>
   <meta content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" name="viewport">
   <link rel="shortcut icon" href="img/BEVILECLOGO.png">
-  <!--Sweetalert Plugin --->
   <script src="bower_components/sweetalert/sweetalert.js"></script>
-  <!-- AdminLTE App -->
-  <script src="dist/js/adminlte.min.js"></script>
-  <!-- jQuery 3 -->
+
   <script src="bower_components/jquery/dist/jquery.min.js"></script>
-  <!-- Bootstrap 3.3.7 -->
+
+  <script src="bower_components/select2/dist/js/select2.full.min.js"></script>
+
   <script src="bower_components/bootstrap/dist/js/bootstrap.min.js"></script>
-  <!-- Bootstrap -->
+
+  <script src="dist/js/adminlte.min.js"></script>
+
   <link rel="stylesheet" href="bower_components/bootstrap/dist/css/bootstrap.min.css">
+
+  <link rel="stylesheet" href="bower_components/select2/dist/css/select2.min.css">
   <!-- daterange picker -->
   <link rel="stylesheet" href="bower_components/bootstrap-daterangepicker/daterangepicker.css">
   <!-- bootstrap datepicker -->

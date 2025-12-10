@@ -140,18 +140,18 @@ include("include/stat_op_caisse.php");
 
                             if (($_SESSION['role'] ?? '') == "Admin" && $leshop != "all") {
                                 // Admin filtrant par magasin
-                                $conditions[] = "cashier_name IN (SELECT username FROM tbl_user WHERE magasin = :leshop)";
+                                $conditions[] = "user IN (SELECT username FROM tbl_user WHERE magasin = :leshop)";
                                 $params[':leshop'] = $leshop;
                             } elseif (($_SESSION['role'] ?? '') != "Admin") {
                                 // Opérateur/Responsable ne voit que son magasin
-                                $conditions[] = "cashier_name IN (SELECT username FROM tbl_user WHERE magasin = :magasin)";
+                                $conditions[] = "user IN (SELECT username FROM tbl_user WHERE magasin = :magasin)";
                                 $params[':magasin'] = $magasin;
                             }
                         } else {
                             // Pas de filtre de date, utiliser la logique par défaut
                             if (($_SESSION['role'] ?? '') != "Admin") {
                                 // Opérateur/Responsable ne voit que son magasin
-                                $conditions[] = "cashier_name IN (SELECT username FROM tbl_user WHERE magasin = :magasin)";
+                                $conditions[] = "user IN (SELECT username FROM tbl_user WHERE magasin = :magasin)";
                                 $params[':magasin'] = $magasin;
                             }
                             $sql .= " ORDER BY invoice_id DESC";

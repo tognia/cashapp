@@ -1,5 +1,209 @@
 # Change Log
 
+## 4.1.0 (unreleased)
+
+### Breaking changes
+
+* The minimum jQuery version supported is the latest version in the 1.x, 2.x, and 3.x series (#5525, #5955)
+* Removed support for legacy Internet Explorer (versions older than IE 11) (#5834)
+* Removed modules deprecated in 4.0.0 (#5815)
+  * Removed legacy support for `<input />` tags
+  * Removed legacy support for `initSelection`
+  * Removed legacy support for `query`
+  * Removed old `select2/compat/matcher` module
+* Removed undocumented CSS-related options (#5815)
+  * Removed `dropdownCss` option
+  * Removed `adaptDropdownCss` option
+  * Removed `containerCss` option
+  * Removed `adaptContainerCss` option
+* The `containerCssClass` option has been renamed to `selectionCssClass` (#5815, #5847)
+* Significant changes to the HTML/CSS for the selection area impacting custom themes (#5842)
+* New CSS classes for the dropdown results to better target highlighted / selected results (#5841)
+* The search box in the selection area for multiple selects has been changed from an `<input />` to a `<textarea>` to support pasting multiple lines (#5806)
+* Change tab key to select the currently highlighted option instead of just closing (#5759)
+* Tags will be highlighted first in the results even if other options have been selected (#5812)
+
+### New features / improvements
+
+* `dropdownCssClass` and `selectionCssClass` are now available in all builds of Select2 (#5815)
+* Calls to get the currently selected options are now considerably faster on large datasets (#5775)
+* Selected results in the dropdown should now be properly announced to screen readers (#5841)
+* Significant improvements were made to make the selection area accessible (#5824, #5842, #5916, #5942, #5973)
+* Allow pasting multiple lines into the search field for tokenization (#5806)
+
+### Bug fixes
+
+* Resize the selection search on close to properly display the placeholder (#5766)
+* Change internal data ID generation to be more unique and prevent conflicts with numeric IDs (#5840)
+* Internet Explorer 11 no longer steals focus of search box while tagging (#5842)
+* Fix slow memory leak caused by not clearing cache on destroy (#5965)
+
+### Translations
+
+* Add Esperanto translation (`eo`) (#5823)
+* Add Punjabi translations (`pa`) (#5831)
+* Add Telugu translations (`te`) (#5881)
+* Updated Hungarian translations (`hu`) for 4.1.0 changes (#5970)
+
+### Miscellaneous
+
+* The `amdLanguageBase` option no longer has an effect because the full build does not include any dynamically loaded modules (#5815)
+
+## 4.0.13
+
+### New features / improvements
+
+* Trigger `input` event before `change` events (#4649)
+* Feed back the keypress code that was responsible for the 'close' event (#5513)
+* Only trigger `selection:update` once on DOM change events (#5734)
+
+### Bug fixes
+
+* Prevent opening of disabled elements (#5751)
+
+### Documentation
+
+* Fix "edit this page" links in docs (#5689)
+
+### Miscellaneous
+
+* Registered Select2 on Open Collective (#5700, #5721, #5741)
+
+## 4.0.12
+
+### Bug fixes
+
+* Fixes incorrect offset when using the Shadow DOM and styling the `<html>` element (#5682)
+
+### Miscellaneous
+
+* Replace cdnjs with jsDelivr in the documentation (#5687)
+* Fix incorrect provider for the automated NPM deployment (#5686)
+
+## 4.0.11
+
+### Bug fixes
+
+* Fixes jQuery migrate error when getting offset when dropdownParent not in document (#5584)
+
+### Miscellaneous
+
+* Enable GitHub actions for CI (#5591)
+* Documentation has been moved into and is deployed from the code repository (#5638)
+* Remove Travis CI integration (#5665)
+
+## 4.0.10
+
+### New features / improvements
+
+* Support passing in a selector for `dropdownParent` option (#5622)
+
+### Bug fixes
+
+* Fix bug where dropdowns pointing upwards were incorrectly positioned (#5621)
+
+## 4.0.9
+
+### New features / improvements
+
+* Mirror disabled state through aria-disabled on selection (#5579)
+* Select2 now clears the internal ID when it is destroyed (#5587)
+* Set the main ARIA 1.1 roles and properties for comboboxes (#5582)
+* The `language` option now has a clearly defined fallback chain (#5602)
+
+### Bug fixes
+
+* Do not propagate click when search box is not empty (#5580)
+* Fix `maximumSelectionLength` being ignored by `closeOnSelect` (#5581)
+* Fix generated options not receiving result IDs (#5586)
+* Remove selection title attribute if text is empty (#5589)
+* Reposition dropdown whenever items are selected (#5590)
+* Fix dropdown positioning when displayed above with messages (#5592)
+* Fix search box expanding width of container (#5595)
+* `allowClear` no longer shifts selections to a new line (#5603)
+
+### Translations
+
+* Fix error in German translations (#5604)
+
+### Miscellaneous
+
+* Updated development grunt version so it no longer shows as vulnerable (#5597)
+* Remove unused variables (#5554)
+
+## 4.0.8
+
+### New features / improvements
+
+* Test against and fix compatibility with jQuery 3.4.1 (#5531)
+* Results respect disabled state of `<option>` (#5560)
+* Add `computedstyle` option for calculating the width (#5559)
+
+### Bug fixes
+
+* Fix tag creation being broken in 4.0.7 (#5558)
+* Fix infinite scroll when the scrollbar is not visible (#5575)
+* Revert change to focusing behaviour in 4.0.6 (#5576)
+
+### Translations
+
+* Fix wording in French translations (#5521)
+
+### Miscellaneous
+
+* Update grunt-contrib-qunit to latest version (#5530)
+* Removed unused `.select2-selection__placeholder` CSS definitions for multiple selects (#5508)
+* Remove deprecated jQuery shorthand (#5564)
+
+## 4.0.7
+
+### New features/improvements
+- Do not close on select if Ctrl or Meta (Cmd) keys being held (#5222)
+
+### Bug fixes
+- Fixed issue where single select boxes would automatically reopen when they were closed (#5490, #5492)
+
+### Miscellaneous
+- Move almost and jquery-mousewheel to devDependencies (#5489)
+
+## 4.0.6
+
+### New features/improvements
+- Add style property to package.json (#5019)
+- Implement `clear` and `clearing` events (#5058)
+- Add `scrollAfterSelect` option (#5150)
+- Add missing diacritics (#4118, #4337, #5464)
+
+### Bug fixes
+- Fix up arrow error when there are no options in dropdown (#5127)
+- Add `;` before beginning of factory wrapper (#5089)
+- Fix IE11 issue with select losing focus after selecting an item (#4860)
+- Clear tooltip from `select2-selection__rendered` when selection is cleared (#4640, #4746)
+- Fix keyboard not closing when closing dropdown on iOS 10 (#4680)
+- User-defined types not normalized properly when passed in as data (#4632)
+- Perform deep merge for `Defaults.set()` (#4364)
+- Fix "the results could not be loaded" displaying during AJAX request (#4356)
+- Cache objects in `Utils.__cache` instead of using `$.data` (#4346, #5486)
+- Removing the double event binding registration of `selection:update` (#4306)
+
+#### Accessibility
+- Improve `.select2-hidden-accessible` (#4908)
+- Add role and aria-readonly attributes to single selection dropdown value (#4881)
+
+### Translations
+- Add Turkmen translations (`tk`) (#5125)
+- Fix error in French translations (#5122)
+- Add Albanian translation (`sq`) (#5199)
+- Add Georgian translation (`ka`) (#5179)
+- Add Nepali translation (`ne`) (#5295)
+- Add Bangla translation (`bn`) (#5248)
+- Add `removeAllItems` translation for clear "x" title (#5291)
+- Fix wording in Vietnamese translations (#5387)
+- Fix error in Russian translation (#5401)
+
+### Miscellaneous
+-  Remove duplicate CSS selector in classic theme (#5115)
+
 ## 4.0.5
 
 ### Bug fixes

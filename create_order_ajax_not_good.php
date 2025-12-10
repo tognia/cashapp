@@ -114,7 +114,7 @@ if (isset($_POST['save_order'])) {
           $update_stock->execute();
 
           $insert_detail = $pdo->prepare("INSERT INTO tbl_invoice_detail(invoice_id, product_id, product_code, product_name, qty, product_satuan, price, total, order_date, remise)
-                                                    VALUES(:invid, :productid, :productcode, :productname, :qty, :productsatuan, :price, :total, :orderdate, :remise)");
+                                                     VALUES(:invid, :productid, :productcode, :productname, :qty, :productsatuan, :price, :total, :orderdate, :remise)");
 
           $insert_detail->bindParam(':invid', $invoice_id);
           $insert_detail->bindParam(':productid', $product_id);
@@ -183,6 +183,32 @@ if (isset($_POST['save_order'])) {
     max-width: 600px;
     margin: 0 auto;
   }
+
+  .search-methods-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .search-method {
+    background: rgba(255, 255, 255, 0.95);
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  .search-method-title {
+    color: #667eea;
+    font-size: 14px;
+    font-weight: bold;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
 
   #barcodeScanner {
     width: 100%;
@@ -276,29 +302,43 @@ if (isset($_POST['save_order'])) {
   <section class="content container-fluid">
 
     <div class="scanner-section">
-      <div class="row">
-        <div class="col-md-5">
-          <label class="scanner-label">📱 SCANNER CODE-BARRE</label>
+      <div class="search-methods-container">
+        <div class="scanner-section">
+          <label class="scanner-label">
+            📱 SCANNER CODE-BARRE / SAISIR CODE PRODUIT
+          </label>
           <div class="scanner-input-wrapper">
-            <input type="text" id="barcodeScanner" placeholder="Scannez ici..." autocomplete="off" autofocus>
+            <input
+              type="text"
+              id="barcodeScanner"
+              placeholder="Scannez ou tapez le code produit puis Entrée..."
+              autocomplete="off"
+              autofocus>
             <i class="fa fa-barcode scanner-icon"></i>
           </div>
+
         </div>
 
-        <div class="col-md-2 text-center" style="margin-top: 30px;">
-          <span class="badge" style="background: rgba(255,255,255,0.3)">OU</span>
-        </div>
-
-        <div class="col-md-5">
-          <label class="scanner-label">🔍 RECHERCHE PAR NOM</label>
-          <div class="scanner-input-wrapper">
-            <select id="manualSearch" class="form-control" style="width: 100%;">
-              <option value="">Chercher un produit...</option>
-            </select>
+        <div class="search-method">
+          <div class="search-method-title">
+            <i class="fa fa-search"></i>
+            RECHERCHE MANUELLE (Nom ou Code)
           </div>
+          <select class="form-control select2" id="manualSelect" style="width: 100%;">
+            <option value="">-- Rechercher un produit --</option>
+          </select>
         </div>
+
+      </div>
+
+      <div style="text-align: center; margin-top: 15px;">
+        <span class="stats-badge" id="itemCount">0 articles</span>
+        <span class="stats-badge" id="totalItems">0 unités</span>
       </div>
     </div>
+
+
+
 
     <div class="box box-success">
       <form action="" method="POST" id="orderForm">
@@ -374,7 +414,6 @@ if (isset($_POST['save_order'])) {
                 </tr>
               </thead>
               <tbody>
-                <!-- Les produits seront ajoutés ici dynamiquement -->
               </tbody>
             </table>
           </div>
@@ -459,7 +498,62 @@ if (isset($_POST['save_order'])) {
     let currentEditingRow = null;
 
     // ========================================
-    // FONCTION : Scanner de code-barre
+    // INITIALISATION SELECT2 POUR RECHERCHE MANUELLE (AJAX)
+    // ========================================
+    $('#manualSelect').select2({
+      placeholder: '-- Rechercher un produit (Nom ou Code) --',
+      allowClear: true,
+      minimumInputLength: 2, // Commencez la recherche après 2 caractères
+      ajax: {
+        url: 'search_products_ajax.php', // Utilise le nouveau fichier pour la recherche
+        dataType: 'json',
+        delay: 250,
+        data: function(params) {
+          return {
+            q: params.term, // Le terme de recherche
+            page: params.page
+          };
+        },
+        processResults: function(data, params) {
+          params.page = params.page || 1;
+          return {
+            results: data.products, // Liste des options
+            pagination: {
+              more: (params.page * 30) < data.total_count
+            }
+          };
+        },
+        cache: true
+      }
+    });
+
+    // Initialisation Select2 pour le champ Client
+    $('#clientSelect').select2();
+
+
+    // ========================================
+    // ÉVÉNEMENT : Produit sélectionné dans le Select2
+    // ========================================
+    $("#manualSelect").on("select2:select", function(e) {
+      const data = e.params.data;
+      const code = data.id; // Le product_code est la valeur (id) de l'option retournée par AJAX
+
+      if (!code) return;
+
+      // Appel de la fonction de recherche existante (qui appelle get_product_by_code.php)
+      searchProductByCode(code);
+
+      // Réinitialise le select pour éviter une confusion
+      $(this).val(null).trigger('change');
+
+      // Remet le focus sur le scanner
+      setTimeout(function() {
+        $('#barcodeScanner').focus();
+      }, 100);
+    });
+
+    // ========================================
+    // FONCTION : Scanner de code-barre (inchangée)
     // ========================================
     $('#barcodeScanner').on('keypress', function(e) {
       if (e.which === 13) { // Touche Entrée
@@ -479,60 +573,8 @@ if (isset($_POST['save_order'])) {
       }
     });
 
-    // Initialisation de Select2 pour la recherche manuelle
-    $('#manualSearch').select2({
-      placeholder: 'Tapez le nom du produit...',
-      minimumInputLength: 2,
-      allowClear: true,
-      ajax: {
-        url: 'search_product_manual.php',
-        dataType: 'json',
-        delay: 250,
-        data: function(params) {
-          return {
-            q: params.term
-          };
-        },
-        processResults: function(data) {
-          return {
-            results: $.map(data, function(item) {
-              return {
-                text: item.product_code + ' - ' + item.product_name,
-                id: item.product_code,
-                full_data: item
-              };
-            })
-          };
-        }
-      }
-    });
-
-    // Action lors du clic sur un produit trouvé
-    $('#manualSearch').on('select2:select', function(e) {
-      addOrUpdateProduct(e.params.data.full_data);
-      $(this).val(null).trigger('change'); // Vide le champ après sélection
-      $('#barcodeScanner').focus(); // Retourne au scanner
-    });
-
-    // Déclencheur lors de la sélection d'un produit dans la liste
-    $('#manualSearch').on('select2:select', function(e) {
-      var data = e.params.data.full_data;
-
-      // Appelle la fonction existante pour ajouter au panier
-      addOrUpdateProduct(data);
-
-      // Réinitialise le champ de recherche pour la transaction suivante
-      $(this).val(null).trigger('change');
-
-      // Remet le focus sur le scanner pour la rapidité
-      $('#barcodeScanner').focus();
-    });
-
-
-
-
     // ========================================
-    // FONCTION : Recherche produit par code
+    // FONCTION : Recherche produit par code (inchangée)
     // ========================================
     function searchProductByCode(code) {
       $.ajax({
@@ -559,7 +601,7 @@ if (isset($_POST['save_order'])) {
     }
 
     // ========================================
-    // FONCTION : Ajouter ou mettre à jour produit
+    // FONCTION : Ajouter ou mettre à jour produit (inchangée)
     // ========================================
     function addOrUpdateProduct(data) {
       const productId = data.product_id;
@@ -591,7 +633,7 @@ if (isset($_POST['save_order'])) {
     }
 
     // ========================================
-    // FONCTION : Mettre à jour produit existant
+    // FONCTION : Mettre à jour produit existant (inchangée)
     // ========================================
     function updateExistingProduct(row, data) {
       const currentQty = parseInt(row.find('.quantity_product').val()) || 0;
@@ -619,8 +661,10 @@ if (isset($_POST['save_order'])) {
       showNotification('✅ Quantité mise à jour: ' + data.product_name + ' (x' + newQty + ')', 'success');
     }
 
+
+
     // ========================================
-    // FONCTION : Ajouter nouveau produit
+    // FONCTION : Ajouter nouveau produit (inchangée)
     // ========================================
     function addNewProduct(data) {
       const html = `
@@ -659,7 +703,7 @@ if (isset($_POST['save_order'])) {
     }
 
     // ========================================
-    // FONCTION : Calculs et gestion quantité/prix
+    // FONCTION : Calculs et gestion quantité/prix (inchangée)
     // ========================================
     $(document).on('keyup change', '.quantity_product, .productprice, .discount', function() {
       const tr = $(this).closest('tr');
@@ -701,7 +745,7 @@ if (isset($_POST['save_order'])) {
     });
 
     // ========================================
-    // FONCTION : Suppression produit
+    // FONCTION : Suppression produit (inchangée)
     // ========================================
     $(document).on('click', '.btn-remove', function() {
       $(this).closest('tr').remove();
@@ -711,7 +755,7 @@ if (isset($_POST['save_order'])) {
     });
 
     // ========================================
-    // FONCTION : Vider tout le panier
+    // FONCTION : Vider tout le panier (inchangée)
     // ========================================
     $('#clearAllBtn').on('click', function() {
       if (confirm('Voulez-vous vraiment vider tout le panier ?')) {
@@ -724,7 +768,7 @@ if (isset($_POST['save_order'])) {
     });
 
     // ========================================
-    // FONCTION : Calcul des totaux
+    // FONCTION : Calcul des totaux (inchangée)
     // ========================================
     function calculate(paid) {
       let total_net_apres_remise = 0;
@@ -762,7 +806,7 @@ if (isset($_POST['save_order'])) {
     }
 
     // ========================================
-    // FONCTION : Mise à jour statistiques
+    // FONCTION : Mise à jour statistiques (inchangée)
     // ========================================
     function updateStats() {
       const itemCount = $('#myOrder tbody tr').length;
@@ -777,7 +821,7 @@ if (isset($_POST['save_order'])) {
     }
 
     // ========================================
-    // FONCTION : Notifications
+    // FONCTION : Notifications (inchangée)
     // ========================================
     function showNotification(message, type) {
       const bgColor = {
@@ -813,11 +857,11 @@ if (isset($_POST['save_order'])) {
     }
 
     // ========================================
-    // FONCTION : Sons
+    // FONCTION : Sons (inchangée)
     // ========================================
     function playSuccessSound() {
       // Son de succès (optionnel - nécessite fichier audio)
-      // const audio = new Audio('data:audio/wav;base64,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");
+      // const audio = new Audio('data:audio/wav;base64,...');
       // audio.play().catch(e => console.log('Audio play failed'));
     }
 
@@ -841,7 +885,7 @@ if (isset($_POST['save_order'])) {
     }
 
     // ========================================
-    // GESTION PAIEMENT
+    // GESTION PAIEMENT (inchangée)
     // ========================================
     $('#paid').on('keyup change', function() {
       const paid = parseFloat($(this).val()) || 0;
@@ -849,7 +893,7 @@ if (isset($_POST['save_order'])) {
     });
 
     // ========================================
-    // RACCOURCIS CLAVIER
+    // RACCOURCIS CLAVIER (inchangée)
     // ========================================
     $(document).on('keydown', function(e) {
       // F2 - Focus sur scanner
@@ -875,7 +919,7 @@ if (isset($_POST['save_order'])) {
     });
 
     // ========================================
-    // VALIDATION FORMULAIRE
+    // VALIDATION FORMULAIRE (inchangée)
     // ========================================
     $('#orderForm').on('submit', function(e) {
       const totalTTC = parseFloat($('#total').val()) || 0;
@@ -901,28 +945,18 @@ if (isset($_POST['save_order'])) {
     });
 
     // ========================================
-    // INITIALISATION
+    // INITIALISATION FINALE (inchangée)
     // ========================================
     calculate(0);
     updateStats();
     $('#barcodeScanner').focus();
 
     // Garder le focus sur le scanner
-    // Correction : Garder le focus sur le scanner SEULEMENT si on n'est pas en train de taper ailleurs
-    // Correction : Garder le focus sur le scanner SAUF si on tape ailleurs
     setInterval(function() {
-      var activeElement = document.activeElement;
-
-      // On vérifie si l'utilisateur est sur un champ de saisie
-      var isInputActive = activeElement.tagName === 'INPUT' ||
-        activeElement.tagName === 'SELECT' ||
-        $(activeElement).hasClass('select2-search__field'); // IMPORTANT pour Select2
-
-      // Si on ne tape rien ailleurs, on remet le focus sur le scanner
-      if (!isInputActive) {
+      if (!$(':focus').is('input[type="number"], #paid, #paymentMode, #clientSelect, .select2-search__field')) {
         $('#barcodeScanner').focus();
       }
-    }, 1500);
+    }, 200000);
 
   });
 </script>

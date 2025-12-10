@@ -68,10 +68,11 @@ if (isset($_POST['save_order'])) {
     try {
       $pdo->beginTransaction();
 
-      $insert_invoice = $pdo->prepare("INSERT INTO tbl_invoice(cashier_name, id_client, order_date, time_order, total, paid, due, remise, tva, payment_mode)
-                                             VALUES(:name, :id_client, :orderdate, :timeorder, :total, :paid, :due, :remise, :tva, :payment_mode)");
+      $insert_invoice = $pdo->prepare("INSERT INTO tbl_invoice(cashier_name,user, id_client, order_date, time_order, total, paid, due, remise, tva, payment_mode)
+                                             VALUES(:name, :user, :id_client, :orderdate, :timeorder, :total, :paid, :due, :remise, :tva, :payment_mode)");
 
       $insert_invoice->bindParam(':name', $cashier_name);
+      $insert_invoice->bindParam(':user', $_SESSION['user_name']);
       $insert_invoice->bindParam(':id_client', $id_client);
       $insert_invoice->bindParam(':orderdate', $order_date);
       $insert_invoice->bindParam(':timeorder', $order_time);
@@ -184,6 +185,32 @@ if (isset($_POST['save_order'])) {
     margin: 0 auto;
   }
 
+  .search-methods-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .search-method {
+    background: rgba(255, 255, 255, 0.95);
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  .search-method-title {
+    color: #667eea;
+    font-size: 14px;
+    font-weight: bold;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+
   #barcodeScanner {
     width: 100%;
     padding: 15px 50px 15px 15px;
@@ -275,33 +302,56 @@ if (isset($_POST['save_order'])) {
 
   <section class="content container-fluid">
 
-    <div class="form-group">
+    <!-- <div class="form-group">
       <label>Recherche manuelle</label>
       <select id="manualSelect" class="form-control">
         <option value="">-- Sélectionner un produit --</option>
       </select>
-    </div>
+    </div> -->
 
 
-    <!-- SECTION SCANNER -->
+
+    <!-- SECTION DOUBLE RECHERCHE -->
     <div class="scanner-section">
-      <label class="scanner-label">
-        📱 SCANNER CODE-BARRE / SAISIR CODE PRODUIT
-      </label>
-      <div class="scanner-input-wrapper">
-        <input
-          type="text"
-          id="barcodeScanner"
-          placeholder="Scannez ou tapez le code produit puis Entrée..."
-          autocomplete="off"
-          autofocus>
-        <i class="fa fa-barcode scanner-icon"></i>
+      <div class="search-methods-container">
+        <!-- SECTION SCANNER -->
+        <div class="scanner-section">
+          <label class="scanner-label">
+            📱 SCANNER CODE-BARRE / SAISIR CODE PRODUIT
+          </label>
+          <div class="scanner-input-wrapper">
+            <input
+              type="text"
+              id="barcodeScanner"
+              placeholder="Scannez ou tapez le code produit puis Entrée..."
+              autocomplete="off"
+              autofocus>
+            <i class="fa fa-barcode scanner-icon"></i>
+          </div>
+
+        </div>
+
+        <!-- MÉTHODE 2: Recherche Manuelle -->
+        <div class="search-method">
+          <div class="search-method-title">
+            <i class="fa fa-search"></i>
+            RECHERCHE MANUELLE (Nom ou Code)
+          </div>
+          <select class="form-control select2" id="manualSelect" style="width: 100%;">
+            <option value="">-- Rechercher un produit --</option>
+          </select>
+        </div>
+
       </div>
+
       <div style="text-align: center; margin-top: 15px;">
         <span class="stats-badge" id="itemCount">0 articles</span>
         <span class="stats-badge" id="totalItems">0 unités</span>
       </div>
     </div>
+
+
+
 
     <div class="box box-success">
       <form action="" method="POST" id="orderForm">
@@ -312,7 +362,7 @@ if (isset($_POST['save_order'])) {
               <label>Nom Opérateur</label>
               <div class="input-group">
                 <div class="input-group-addon"><i class="fa fa-user"></i></div>
-                <input type="text" class="form-control pull-right" name="cashier_name" value="<?php echo $_SESSION['user_name']; ?>" readonly>
+                <input type="text" class="form-control pull-right" name="cashier_name" value="<?php echo $_SESSION['fullname']; ?>" readonly>
               </div>
             </div>
           </div>
