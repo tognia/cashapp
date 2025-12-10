@@ -107,11 +107,11 @@ $_SESSION['blockrefresh'] = 0;
     <div class="u-clearfix u-sheet u-sheet-1">
       <div class="u-align-center u-container-style u-group u-shape-rectangle u-group-1">
         <div class="u-container-layout u-container-layout-1">
-          <div class="u-border-6 u-border-palette-1-base u-opacity u-opacity-70 u-shape u-shape-svg u-text-white u-shape-1">
+          <div class="u-border-6 u-border-palette-1-base u-opacity u-opacity-95 u-shape u-shape-svg u-text-white u-shape-1">
 
             <div class="login-box">
               <div class="login-logo">
-                <a href="index.php"><b>CASH-SOFT|FYAELEC </b></a>
+                <!-- <a href="index.php"><b>CASH-SOFT|SOCIETE NGNO-KWE SERVICES SARL</b></a> -->
               </div>
               <!-- /.login-logo -->
               <div class="login-box-body">

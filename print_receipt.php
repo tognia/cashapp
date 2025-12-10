@@ -120,7 +120,7 @@ $product_details = $req_details->fetchAll(PDO::FETCH_ASSOC);
 <body>
 
     <div class="receipt">
-        <h3>🛒 ETS</h3><img src="./images/logo.png" alt="Logo" style="display: block; margin: 0 auto; max-width: 100px;">
+        <img src="./images/logo_nk.png" alt="Logo" style="display: block; margin: 0 auto; max-width: 100px;">
         <h4>Reçu de Vente</h4>
         <p style="text-align: center; border-top: 1px dashed #000; padding-top: 5px;">
             Date: <?php echo date("d-m-Y H:i:s", strtotime($invoice_data['order_date'] . ' ' . $invoice_data['time_order'])); ?><br>
