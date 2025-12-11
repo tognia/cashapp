@@ -2,38 +2,49 @@
 // Inclure la connexion à la base de données
 include_once 'db/connect_db.php';
 
-// Vérification minimale de session (optionnel mais recommandé)
+// Vérification de session
 if (empty($_SESSION['user_name'])) {
     exit('Accès non autorisé.');
 }
 
-// --- LOGIQUE DE RÉCUPÉRATION DES DONNÉES ET FILTRES (Répétée de order.php) ---
+// --- LOGIQUE DE RÉCUPÉRATION DES DONNÉES ET FILTRES ---
 
 $sql = "SELECT * FROM tbl_invoice";
 $conditions = [];
 $params = [];
+
 $magasin = $_SESSION['magasin'] ?? '';
-// Les paramètres de filtre sont récupérés via $_GET car ils sont passés dans la querystring par le bouton.
+$role = $_SESSION['role'] ?? '';
+
+// Récupération des paramètres GET
 $leshop = $_GET['shop'] ?? null;
 $fromdate = $_GET['date_1'] ?? null;
 $todate = $_GET['date_2'] ?? null;
+$view_status = $_GET['view_status'] ?? 'saved'; // Par défaut 'saved'
 
+// 1. Filtre par Statut
+$conditions[] = "status = :status";
+$params[':status'] = $view_status;
+
+// 2. Filtre par Date
 if ($fromdate && $todate) {
     $conditions[] = "order_date BETWEEN :fromdate AND :todate";
     $params[':fromdate'] = $fromdate;
     $params[':todate'] = $todate;
 
-    if (($_SESSION['role'] ?? '') == "Admin" && $leshop != "all") {
-        $conditions[] = "cashier_name IN (SELECT username FROM tbl_user WHERE magasin = :leshop)";
+    // 3. Filtre par Magasin (Seulement si filtre date actif OU par défaut selon logique)
+    if ($role == "Admin" && $leshop != "all") {
+        // Correction : on utilise 'user' au lieu de 'cashier_name'
+        $conditions[] = "user IN (SELECT username FROM tbl_user WHERE magasin = :leshop)";
         $params[':leshop'] = $leshop;
-    } elseif (($_SESSION['role'] ?? '') != "Admin") {
-        $conditions[] = "cashier_name IN (SELECT username FROM tbl_user WHERE magasin = :magasin)";
+    } elseif ($role != "Admin") {
+        $conditions[] = "user IN (SELECT username FROM tbl_user WHERE magasin = :magasin)";
         $params[':magasin'] = $magasin;
     }
 } else {
-    // Pas de filtre de date
-    if (($_SESSION['role'] ?? '') != "Admin") {
-        $conditions[] = "cashier_name IN (SELECT username FROM tbl_user WHERE magasin = :magasin)";
+    // Pas de filtre de date, on applique quand même la restriction magasin pour les non-admins
+    if ($role != "Admin") {
+        $conditions[] = "user IN (SELECT username FROM tbl_user WHERE magasin = :magasin)";
         $params[':magasin'] = $magasin;
     }
 }
@@ -43,47 +54,72 @@ if (!empty($conditions)) {
 }
 $sql .= " ORDER BY invoice_id DESC";
 
-$select = $pdo->prepare($sql);
-$select->execute($params);
-$transactions = $select->fetchAll(PDO::FETCH_ASSOC);
+try {
+    $select = $pdo->prepare($sql);
+    $select->execute($params);
+    $transactions = $select->fetchAll(PDO::FETCH_ASSOC);
+} catch (PDOException $e) {
+    exit("Erreur SQL : " . $e->getMessage());
+}
 
 // --- LOGIQUE D'EXPORTATION CSV ---
 
-// 1. Définir le nom du fichier
-$filename = 'rapport_transactions_' . date('Ymd_His') . '.csv';
+// 1. Définir le nom du fichier (avec le statut pour être clair)
+$status_label = ($view_status == 'canceled') ? 'ANNULEES' : 'VALIDEES';
+$filename = 'rapport_transactions_' . $status_label . '_' . date('Ymd_His') . '.csv';
 
-// 2. Définir les en-têtes HTTP pour forcer le téléchargement en tant que CSV
+// 2. Définir les en-têtes HTTP
 header('Content-Type: text/csv; charset=utf-8');
 header('Content-Disposition: attachment; filename="' . $filename . '"');
 
-// 3. Ouvrir un pointeur vers le flux de sortie
+// 3. Ouvrir le flux de sortie
 $output = fopen('php://output', 'w');
 
-// Utiliser le point-virgule (;) ou la virgule (,) comme délimiteur. 
-// Le point-virgule est souvent préféré pour la compatibilité avec Excel dans les régions francophones.
+// Délimiteur (point-virgule pour Excel français)
 $delimiter = ';';
 
-// Écrire le BOM (Byte Order Mark) pour assurer l'encodage UTF-8 sous Excel
+// BOM pour UTF-8
 fprintf($output, chr(0xEF) . chr(0xBB) . chr(0xBF));
 
-// Écrire l'en-tête du fichier CSV (les titres des colonnes)
+// En-têtes des colonnes
 fputcsv($output, array('ID', 'OPERATEUR', 'CLIENT ID', 'DATE', 'MONTANT TOTAL (FCFA)', 'TVA (FCFA)', 'MODE PAIEMENT'), $delimiter);
+
+// Variables pour les totaux
+$grand_total = 0;
+$grand_tva = 0;
 
 // Écrire les données ligne par ligne
 foreach ($transactions as $row) {
-    // Récupération sécurisée et formatage des données
     $csv_row = [
         $row['invoice_id'],
         $row['cashier_name'],
         $row['id_client'],
         $row['order_date'],
-        number_format($row['total'], 0, ',', ' '), // Montant formaté
-        number_format($row['tva'], 0, ',', ' '),   // TVA formatée
+        number_format($row['total'], 0, ',', ' '), // Format visuel
+        number_format($row['tva'], 0, ',', ' '),
         $row['payment_mode']
     ];
     fputcsv($output, $csv_row, $delimiter);
+
+    // Accumulation des totaux (sur les valeurs brutes de la BDD)
+    $grand_total += $row['total'];
+    $grand_tva += $row['tva'];
 }
 
-// 5. Fermer le pointeur de fichier
+// 4. Ajouter une ligne vide puis les totaux
+fputcsv($output, [], $delimiter); // Ligne vide
+
+$row_totals = [
+    '', // ID vide
+    '', // Opérateur vide
+    '', // Client vide
+    'TOTAUX GÉNÉRAUX', // Label
+    number_format($grand_total, 0, ',', ' '), // Total Montant
+    number_format($grand_tva, 0, ',', ' '),   // Total TVA
+    ''  // Paiement vide
+];
+fputcsv($output, $row_totals, $delimiter);
+
+// 5. Fermer le pointeur
 fclose($output);
 exit();

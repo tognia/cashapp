@@ -1,49 +1,61 @@
 <?php
 // print_current_view.php
 
-// Démarrer la session si nécessaire (pour récupérer le rôle et le magasin)
 
 // Inclure la connexion à la base de données
 include_once 'db/connect_db.php';
 
-// Désactiver l'affichage des erreurs (bonne pratique en production)
+// Désactiver l'affichage des erreurs
 error_reporting(0);
 
-// --- LOGIQUE DE RÉCUPÉRATION DES DONNÉES ET FILTRES (Identique à order.php) ---
+// --- LOGIQUE DE FILTRES ---
 
 $sql = "SELECT * FROM tbl_invoice";
 $conditions = [];
 $params = [];
+
 $magasin = $_SESSION['magasin'] ?? '';
-// Récupérer les paramètres passés via l'URL (GET)
+$role = $_SESSION['role'] ?? '';
+
+// Récupérer les paramètres GET
 $leshop = $_GET['shop'] ?? null;
 $fromdate = $_GET['date_1'] ?? null;
 $todate = $_GET['date_2'] ?? null;
+$view_status = $_GET['view_status'] ?? 'saved';
 
-// Déterminer les informations de filtre à afficher
-$filter_summary = "Liste des transactions ";
+// Titre du rapport selon le statut
+$status_label = ($view_status == 'canceled') ? 'ANNULÉES' : 'VALIDÉES';
+$filter_summary = "Liste des transactions **" . $status_label . "**";
+
+// 1. Filtre par Statut
+$conditions[] = "status = :status";
+$params[':status'] = $view_status;
+
+// 2. Filtre par Date
 if ($fromdate && $todate) {
     $conditions[] = "order_date BETWEEN :fromdate AND :todate";
     $params[':fromdate'] = $fromdate;
     $params[':todate'] = $todate;
-    $filter_summary .= "du **$fromdate** au **$todate**";
+    $filter_summary .= " du **$fromdate** au **$todate**";
 }
 
-if (($_SESSION['role'] ?? '') == "Admin") {
+// 3. Filtre par Magasin (Sur la colonne 'user')
+if ($role == "Admin") {
     if ($leshop && $leshop != "all") {
-        $conditions[] = "cashier_name IN (SELECT username FROM tbl_user WHERE magasin = :leshop)";
+        $conditions[] = "user IN (SELECT username FROM tbl_user WHERE magasin = :leshop)";
         $params[':leshop'] = $leshop;
         $filter_summary .= " pour le magasin **$leshop**";
     } else {
         $filter_summary .= " pour **Tous les magasins**";
     }
-} elseif (($_SESSION['role'] ?? '') != "Admin") {
+} else {
     // Opérateur/Responsable ne voit que son magasin
-    $conditions[] = "cashier_name IN (SELECT username FROM tbl_user WHERE magasin = :magasin)";
+    $conditions[] = "user IN (SELECT username FROM tbl_user WHERE magasin = :magasin)";
     $params[':magasin'] = $magasin;
     $filter_summary .= " pour le magasin **$magasin**";
 }
 
+// Construction finale SQL
 if (!empty($conditions)) {
     $sql .= " WHERE " . implode(" AND ", $conditions);
 }
@@ -56,7 +68,6 @@ try {
 } catch (PDOException $e) {
     die("Erreur de requête SQL : " . $e->getMessage());
 }
-
 ?>
 
 <!DOCTYPE html>
@@ -64,19 +75,27 @@ try {
 
 <head>
     <meta charset="UTF-8">
-    <title>Impression - Transactions Filtrées</title>
+    <title>Impression - Transactions <?php echo $status_label; ?></title>
     <style>
         body {
             font-family: Arial, sans-serif;
             font-size: 10pt;
             margin: 20mm;
-            /* Marge pour l'impression */
         }
 
         h1 {
             font-size: 16pt;
             text-align: center;
             margin-bottom: 5px;
+        }
+
+        .status-header {
+            text-align: center;
+            font-weight: bold;
+            font-size: 12pt;
+            margin-bottom: 5px;
+            color: <?php echo ($view_status == 'canceled') ? '#d9534f' : '#000'; ?>;
+            text-transform: uppercase;
         }
 
         .filter-info {
@@ -105,6 +124,13 @@ try {
             text-align: center;
         }
 
+        /* Style spécifique pour les totaux */
+        tfoot th {
+            background-color: #e0e0e0;
+            font-weight: bold;
+            border-top: 2px solid #000;
+        }
+
         .text-center {
             text-align: center;
         }
@@ -125,7 +151,6 @@ try {
             font-size: 8pt;
         }
 
-        /* Masquer la barre d'action du navigateur lors de l'impression */
         @media print {
             .no-print {
                 display: none;
@@ -138,16 +163,17 @@ try {
 
     <header>
         <h1>Rapport des Transactions</h1>
+        <div class="status-header">STATUT : <?php echo $status_label; ?></div>
         <p class="filter-info">
             <?php echo str_replace('**', '', $filter_summary); ?> | Généré le : <?php echo date('d/m/Y H:i:s'); ?>
         </p>
     </header>
 
     <div class="no-print" style="text-align: center; margin-bottom: 15px;">
-        <button onclick="window.print()" style="padding: 10px 20px; font-size: 14px;">
+        <button onclick="window.print()" style="padding: 10px 20px; font-size: 14px; cursor: pointer;">
             Confirmer l'Impression
         </button>
-        <button onclick="window.close()" style="padding: 10px 20px; font-size: 14px; margin-left: 10px;">
+        <button onclick="window.close()" style="padding: 10px 20px; font-size: 14px; margin-left: 10px; cursor: pointer;">
             Fermer la fenêtre
         </button>
     </div>
@@ -167,9 +193,16 @@ try {
         <tbody>
             <?php
             $no = 1;
+            $grand_total = 0; // Initialisation total TTC
+            $grand_tva = 0;   // Initialisation total TVA
+
             if (!empty($transactions)):
                 foreach ($transactions as $row):
-                    // Récupération du nom complet du client si possible (comme dans order.php)
+                    // Calcul des sommes
+                    $grand_total += $row->total;
+                    $grand_tva += $row->tva;
+
+                    // Récupération du nom client
                     $client_display = $row->id_client;
                     $sel = $pdo->prepare("SELECT firstname, middlename, lastname FROM users WHERE username=:username");
                     $sel->bindParam(':username', $row->id_client);
@@ -198,6 +231,17 @@ try {
                 </tr>
             <?php endif; ?>
         </tbody>
+
+        <?php if (!empty($transactions)): ?>
+            <tfoot>
+                <tr>
+                    <th colspan="4" class="text-right">TOTAUX GÉNÉRAUX</th>
+                    <th class="text-right"><?php echo number_format($grand_total, 0, ',', ' '); ?> FCFA</th>
+                    <th class="text-right"><?php echo number_format($grand_tva, 0, ',', ' '); ?> FCFA</th>
+                    <th></th>
+                </tr>
+            </tfoot>
+        <?php endif; ?>
     </table>
 
     <div class="footer">
@@ -205,13 +249,10 @@ try {
     </div>
 
     <script>
-        // Ceci est important car le script parent (order.php) ouvre la fenêtre
-        // sans barre d'adresse, et nous voulons déclencher l'impression ici.
-        // Un délai est souvent nécessaire pour s'assurer que tout le contenu est rendu.
         window.onload = function() {
             setTimeout(function() {
                 window.print();
-            }, 500); // Délai de 500ms
+            }, 500);
         };
     </script>
 

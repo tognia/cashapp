@@ -2,7 +2,7 @@
 include_once 'db/connect_db.php';
 if ($_SESSION['user_name'] == "") {
     header('location:index.php');
-    exit(); // Ajouté exit() après la redirection
+    exit();
 } else {
     if ($_SESSION['role'] == "Admin") {
         include_once 'inc/header_all.php';
@@ -12,23 +12,27 @@ if ($_SESSION['user_name'] == "") {
 }
 error_reporting(0);
 
-// Initialisation de $shop
-if ($_SESSION['role'] != "Admin") {
-    $shop = $_SESSION['magasin'];
-} else {
-    // Si Admin, initialiser avec la session si elle existe, sinon laisser vide (ou utiliser une valeur par défaut si possible)
-    $shop = $_SESSION['select_shop'] ?? '';
-}
+// --- CORRECTION START: RIGOROUS SHOP SELECTION LOGIC ---
 
+// 1. If a form was submitted (by Admin/Storekeeper), update the session preference
 if (isset($_POST['select_shop'])) {
     $_SESSION['select_shop'] = $_POST['shop'];
-    $shop = $_POST['shop']; // Mise à jour immédiate de $shop
 }
 
-// Mise à jour de $shop pour Admin/Storekeeper/Responsable après la sélection
-if (($_SESSION['role'] == "Admin" || $_SESSION['role'] == "storekeeper" || $_SESSION['role'] == "Responsable") && isset($_SESSION['select_shop'])) {
-    $shop = $_SESSION['select_shop'];
+// 2. Define $shop based strictly on Role
+if ($_SESSION['role'] == "Responsable") {
+    // STRICT RULE: Responsable MUST use their assigned shop.
+    // We ignore $_SESSION['select_shop'] entirely for this role.
+    $shop = $_SESSION['magasin'];
+} elseif ($_SESSION['role'] == "Admin" || $_SESSION['role'] == "storekeeper") {
+    // Admin/Storekeeper use the selected shop from session, or empty if none selected
+    $shop = $_SESSION['select_shop'] ?? '';
+} else {
+    // Fallback for any other roles (Operators, etc.) - Default to assigned magasin
+    $shop = $_SESSION['magasin'] ?? '';
 }
+
+// --- CORRECTION END ---
 
 $id = $_GET['id'] ?? null;
 
@@ -172,6 +176,7 @@ if ($shop && isset($select)) {
                     <h3 class="box-title">Liste Produits <?php echo $statusName; ?> Magasin : <?php echo htmlspecialchars($shop); ?></h3>
                     <?php
                     if ($_SESSION['role'] == "Responsable") {
+
                     ?>
                         <div class="pull-right">
                             <a href="edit_stock_shop_validation.php" class="btn btn-success btn-sm"><i class="fa fa-cubes"></i> Réceptionner Stocks En Attente</a>

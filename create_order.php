@@ -68,8 +68,8 @@ if (isset($_POST['save_order'])) {
     try {
       $pdo->beginTransaction();
 
-      $insert_invoice = $pdo->prepare("INSERT INTO tbl_invoice(cashier_name,user, id_client, order_date, time_order, total, paid, due, remise, tva, payment_mode)
-                                             VALUES(:name, :user, :id_client, :orderdate, :timeorder, :total, :paid, :due, :remise, :tva, :payment_mode)");
+      $insert_invoice = $pdo->prepare("INSERT INTO tbl_invoice(cashier_name,user, id_client, order_date, time_order, total, paid, due, remise, tva, payment_mode, status)
+                                             VALUES(:name, :user, :id_client, :orderdate, :timeorder, :total, :paid, :due, :remise, :tva, :payment_mode, :status)");
 
       $insert_invoice->bindParam(':name', $cashier_name);
       $insert_invoice->bindParam(':user', $_SESSION['user_name']);
@@ -82,6 +82,7 @@ if (isset($_POST['save_order'])) {
       $insert_invoice->bindParam(':remise', $remise);
       $insert_invoice->bindParam(':tva', $tva);
       $insert_invoice->bindParam(':payment_mode', $payment_mode);
+      $insert_invoice->bindParam(':status', $status = "saved");
       $insert_invoice->execute();
 
       $invoice_id = $pdo->lastInsertId();
