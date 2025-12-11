@@ -2,13 +2,13 @@
 // create_order.php
 include_once 'db/connect_db.php';
 
-// Vérification de la session utilisateur
-if (!isset($_SESSION['user_name']) || $_SESSION['user_name'] == "") {
-  include_once 'inc/404.php';
-  exit();
+// Vérification session
+if (!isset($_SESSION['user_name'])) {
+  header('location:index.php');
+  exit;
 }
 
-// Inclure l'en-tête en fonction du rôle
+// Header
 if ($_SESSION['role'] == "Admin") {
   include_once 'inc/header_all.php';
 } else {
@@ -17,26 +17,49 @@ if ($_SESSION['role'] == "Admin") {
 
 error_reporting(0);
 date_default_timezone_set('Africa/Douala');
-$shop = $_SESSION['magasin'];
 
-// --- Initialisation des tableaux d'alerte (Stock Min) ---
-$_SESSION['tab_alert'] = array();
-$_SESSION['tab_alert']['id'] = array();
-$_SESSION['tab_alert']['code'] = array();
-$_SESSION['tab_alert']['name'] = array();
-$_SESSION['tab_alert']['stock'] = array();
-$_SESSION['tab_alert']['stock_min'] = array();
-$j = 0;
-$_SESSION['count_alert'] = 0;
+// --- 1. MODE ÉDITION : Si on vient de pending_orders.php ---
+$edit_mode = false;
+$edit_id = "";
+$existing_items = [];
+$client_preselected = "common";
 
-// --- Logique de Sauvegarde de la Commande ---
-if (isset($_POST['save_order'])) {
+if (isset($_GET['edit_id'])) {
+  $edit_mode = true;
+  $edit_id = $_GET['edit_id'];
 
+  // Récupérer infos facture
+  $stmt_inv = $pdo->prepare("SELECT * FROM tbl_invoice WHERE invoice_id = :id AND status = 'pending'");
+  $stmt_inv->execute([':id' => $edit_id]);
+  $invoice_data = $stmt_inv->fetch(PDO::FETCH_ASSOC);
+
+  if ($invoice_data) {
+    $client_preselected = $invoice_data['id_client'];
+
+    // Récupérer les produits et joindre avec le stock actuel pour vérification
+    $stmt_details = $pdo->prepare("SELECT d.*, s.stock as current_stock, s.min_stock, s.min_price 
+                                       FROM tbl_invoice_detail d 
+                                       JOIN tbl_shop_item s ON d.product_id = s.product_id 
+                                       WHERE d.invoice_id = :id");
+    $stmt_details->execute([':id' => $edit_id]);
+    $existing_items = $stmt_details->fetchAll(PDO::FETCH_ASSOC);
+  }
+}
+
+// --- 2. TRAITEMENT DU FORMULAIRE (Save ou Hold) ---
+if (isset($_POST['save_order']) || isset($_POST['hold_order'])) {
+
+  $status = isset($_POST['hold_order']) ? 'pending' : 'saved';
+  $invoice_id_process = $_POST['invoice_id_hidden']; // ID si modification
+  $is_updating = !empty($invoice_id_process);
+
+  // Données formulaire
   $cashier_name = $_POST['cashier_name'];
   $id_client = $_POST['client'];
-  $order_date = date("Y-m-d", strtotime($_POST['orderdate']));
-  $order_time = date("H:i:s", strtotime($_POST['timeorder']));
+  $order_date = date('Y-m-d');
+  $order_time = date('H:i:s');
 
+  // Totaux & Paiement
   $total = $_POST['total'];
   $paid = $_POST['paid'];
   $due = $_POST['due'];
@@ -44,528 +67,307 @@ if (isset($_POST['save_order'])) {
   $tva = $_POST['tva'];
   $payment_mode = $_POST['payment_mode'];
 
+  // Tableaux produits
   $arr_product_id = $_POST['productid'];
-  $arr_product_code = $_POST['productcode'];
-  $arr_product_name = $_POST['productname'];
-  $arr_product_stock = $_POST['productstock'];
-  $arr_product_stockmin = $_POST['minstock'];
-  $arr_product_qty = $_POST['quantity'];
-  $arr_product_satuan = $_POST['productsatuan'];
-  $arr_product_price = $_POST['productprice'];
-  $arr_product_min = $_POST['productmin'];
-  $arr_product_remise = $_POST['productremise'];
-  $arr_product_total = $_POST['producttotal'];
+  // ... On récupère les autres tableaux via POST indexé
 
-  if (empty($arr_product_id) || array_sum($arr_product_qty) == 0) {
-    echo '<script type="text/javascript">
-                jQuery(function validation(){
-                    swal("Warning", "Veuillez ajouter des produits à la transaction.", "warning", {
-                        button: "Continue",
-                    });
-                });
-                </script>';
+  if (empty($arr_product_id)) {
+    echo '<script>swal("Attention", "Le panier est vide.", "warning");</script>';
   } else {
     try {
       $pdo->beginTransaction();
 
-      $insert_invoice = $pdo->prepare("INSERT INTO tbl_invoice(cashier_name,user, id_client, order_date, time_order, total, paid, due, remise, tva, payment_mode, status)
-                                             VALUES(:name, :user, :id_client, :orderdate, :timeorder, :total, :paid, :due, :remise, :tva, :payment_mode, :status)");
+      if ($is_updating) {
+        // MISE A JOUR (Update status + infos)
+        $sql = "UPDATE tbl_invoice SET id_client=:client, total=:total, paid=:paid, due=:due, 
+                        remise=:remise, tva=:tva, payment_mode=:pay, status=:status, order_date=:odate, time_order=:otime 
+                        WHERE invoice_id=:id";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([
+          ':client' => $id_client,
+          ':total' => $total,
+          ':paid' => $paid,
+          ':due' => $due,
+          ':remise' => $remise,
+          ':tva' => $tva,
+          ':pay' => $payment_mode,
+          ':status' => $status,
+          ':odate' => $order_date,
+          ':otime' => $order_time,
+          ':id' => $invoice_id_process
+        ]);
 
-      $insert_invoice->bindParam(':name', $cashier_name);
-      $insert_invoice->bindParam(':user', $_SESSION['user_name']);
-      $insert_invoice->bindParam(':id_client', $id_client);
-      $insert_invoice->bindParam(':orderdate', $order_date);
-      $insert_invoice->bindParam(':timeorder', $order_time);
-      $insert_invoice->bindParam(':total', $total);
-      $insert_invoice->bindParam(':paid', $paid);
-      $insert_invoice->bindParam(':due', $due);
-      $insert_invoice->bindParam(':remise', $remise);
-      $insert_invoice->bindParam(':tva', $tva);
-      $insert_invoice->bindParam(':payment_mode', $payment_mode);
-      $insert_invoice->bindParam(':status', $status = "saved");
-      $insert_invoice->execute();
-
-      $invoice_id = $pdo->lastInsertId();
-
-      if ($invoice_id) {
-        $has_error = false;
-        $alert_products = [];
-
-        for ($i = 0; $i < count($arr_product_id); $i++) {
-
-          $product_id = $arr_product_id[$i];
-          $qty_sold = $arr_product_qty[$i];
-          $current_stock = $arr_product_stock[$i];
-          $min_stock = $arr_product_stockmin[$i];
-          $price_sold = $arr_product_price[$i];
-          $min_price = $arr_product_min[$i];
-
-          $rem_qty = $current_stock - $qty_sold;
-          $diff_price = $price_sold - $min_price;
-          $reste_stock_min = $rem_qty - $min_stock;
-
-          if ($diff_price < 0) {
-            $has_error = true;
-            throw new Exception("Prix de vente inférieur au prix minimum pour " . $arr_product_code[$i]);
-          }
-
-          $update_stock = $pdo->prepare("UPDATE tbl_shop_item SET stock = :new_stock WHERE shop_code = :shop AND product_id = :id");
-          $update_stock->bindParam(':new_stock', $rem_qty);
-          $update_stock->bindParam(':shop', $shop);
-          $update_stock->bindParam(':id', $product_id);
-          $update_stock->execute();
-
-          $insert_detail = $pdo->prepare("INSERT INTO tbl_invoice_detail(invoice_id, product_id, product_code, product_name, qty, product_satuan, price, total, order_date, remise)
-                                                    VALUES(:invid, :productid, :productcode, :productname, :qty, :productsatuan, :price, :total, :orderdate, :remise)");
-
-          $insert_detail->bindParam(':invid', $invoice_id);
-          $insert_detail->bindParam(':productid', $product_id);
-          $insert_detail->bindParam(':productcode', $arr_product_code[$i]);
-          $insert_detail->bindParam(':productname', $arr_product_name[$i]);
-          $insert_detail->bindParam(':qty', $qty_sold);
-          $insert_detail->bindParam(':productsatuan', $arr_product_satuan[$i]);
-          $insert_detail->bindParam(':price', $price_sold);
-          $insert_detail->bindParam(':total', $arr_product_total[$i]);
-          $insert_detail->bindParam(':orderdate', $order_date);
-          $insert_detail->bindParam(':remise', $arr_product_remise[$i]);
-          $insert_detail->execute();
-
-          if ($reste_stock_min <= 0) {
-            $alert_products[] = [
-              'id' => $product_id,
-              'code' => $arr_product_code[$i],
-              'name' => $arr_product_name[$i],
-              'stock' => $rem_qty,
-              'stock_min' => $min_stock
-            ];
-          }
-        }
-
-        foreach ($alert_products as $prod) {
-          array_push($_SESSION['tab_alert']['id'], $prod['id']);
-          array_push($_SESSION['tab_alert']['code'], $prod['code']);
-          array_push($_SESSION['tab_alert']['name'], $prod['name']);
-          array_push($_SESSION['tab_alert']['stock'], $prod['stock']);
-          array_push($_SESSION['tab_alert']['stock_min'], $prod['stock_min']);
-        }
-        $_SESSION['count_alert'] = count($_SESSION['tab_alert']['id']);
-
-        $pdo->commit();
-
-        $_SESSION['invoice_id_to_print'] = $invoice_id;
-
-        echo '<script>
-    swal("Success", "Opération enregistrée avec succès. Facture #' . $invoice_id . '", "success").then(() => {
-        window.location.href="print_receipt.php?id=' . $invoice_id . '";
-    });
-    </script>';
+        // On supprime les anciens détails pour réinsérer les nouveaux (plus simple que update ligne par ligne)
+        $pdo->exec("DELETE FROM tbl_invoice_detail WHERE invoice_id = $invoice_id_process");
+        $new_invoice_id = $invoice_id_process;
       } else {
-        $pdo->rollBack();
-        echo '<script>swal("Error", "Échec de l\'insertion de la facture.", "error");</script>';
+        // INSERTION NOUVELLE
+        $sql = "INSERT INTO tbl_invoice(cashier_name, user, id_client, order_date, time_order, total, paid, due, remise, tva, payment_mode, status)
+                        VALUES(:name, :user, :client, :odate, :otime, :total, :paid, :due, :remise, :tva, :pay, :status)";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([
+          ':name' => $cashier_name,
+          ':user' => $_SESSION['user_name'],
+          ':client' => $id_client,
+          ':odate' => $order_date,
+          ':otime' => $order_time,
+          ':total' => $total,
+          ':paid' => $paid,
+          ':due' => $due,
+          ':remise' => $remise,
+          ':tva' => $tva,
+          ':pay' => $payment_mode,
+          ':status' => $status
+        ]);
+        $new_invoice_id = $pdo->lastInsertId();
+      }
+
+      // Boucle Produits
+      for ($i = 0; $i < count($arr_product_id); $i++) {
+        $rem_qty = $_POST['productstock'][$i] - $_POST['quantity'][$i];
+
+        // Si statut = saved, on décrémente le stock réel
+        if ($status == 'saved') {
+          $upd = $pdo->prepare("UPDATE tbl_shop_item SET stock = :new WHERE product_id = :id AND shop_code = :shop");
+          $upd->execute([':new' => $rem_qty, ':id' => $arr_product_id[$i], ':shop' => $_SESSION['magasin']]);
+        }
+
+        // Insertion détail
+        $ins_det = $pdo->prepare("INSERT INTO tbl_invoice_detail(invoice_id, product_id, product_code, product_name, qty, product_satuan, price, total, order_date, remise)
+                                          VALUES(:inv, :pid, :pcode, :pname, :qty, :unit, :price, :tot, :date, :rem)");
+        $ins_det->execute([
+          ':inv' => $new_invoice_id,
+          ':pid' => $arr_product_id[$i],
+          ':pcode' => $_POST['productcode'][$i],
+          ':pname' => $_POST['productname'][$i],
+          ':qty' => $_POST['quantity'][$i],
+          ':unit' => $_POST['productsatuan'][$i],
+          ':price' => $_POST['productprice'][$i],
+          ':tot' => $_POST['producttotal'][$i],
+          ':date' => $order_date,
+          ':rem' => $_POST['productremise'][$i]
+        ]);
+      }
+
+      $pdo->commit();
+
+      if ($status == 'saved') {
+        echo '<script>swal("Succès", "Facture validée !", "success").then(()=>{ window.location.href="print_receipt.php?id=' . $new_invoice_id . '"; });</script>';
+      } else {
+        echo '<script>swal("Suspendu", "Commande mise en attente.", "info").then(()=>{ window.location.href="create_order.php"; });</script>';
       }
     } catch (Exception $e) {
       $pdo->rollBack();
-      echo '<script>swal("Error", "Erreur lors de l\'enregistrement : ' . $e->getMessage() . '", "error");</script>';
+      echo '<script>swal("Erreur", "' . $e->getMessage() . '", "error");</script>';
     }
   }
 }
 ?>
 
 <style>
+  /* Styles CSS simplifiés */
   .scanner-section {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     padding: 20px;
     border-radius: 10px;
     margin-bottom: 20px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    color: white;
   }
-
-  .scanner-input-wrapper {
-    position: relative;
-    max-width: 600px;
-    margin: 0 auto;
-  }
-
-  .search-methods-container {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 20px;
-    max-width: 1200px;
-    margin: 0 auto;
-  }
-
-  .search-method {
-    background: rgba(255, 255, 255, 0.95);
-    padding: 15px;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  }
-
-  .search-method-title {
-    color: #667eea;
-    font-size: 14px;
-    font-weight: bold;
-    margin-bottom: 10px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
 
   #barcodeScanner {
     width: 100%;
-    padding: 15px 50px 15px 15px;
+    padding: 15px;
     font-size: 18px;
-    border: 3px solid #fff;
-    border-radius: 8px;
-    background: rgba(255, 255, 255, 0.95);
-    transition: all 0.3s ease;
+    border-radius: 5px;
+    border: none;
+    color: #333;
   }
 
-  #barcodeScanner:focus {
-    outline: none;
-    border-color: #ffd700;
-    box-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
-    transform: scale(1.02);
-  }
-
-  .scanner-icon {
-    position: absolute;
-    right: 15px;
-    top: 50%;
-    transform: translateY(-50%);
-    font-size: 24px;
-    color: #667eea;
-    animation: pulse 2s infinite;
-  }
-
-  @keyframes pulse {
-
-    0%,
-    100% {
-      opacity: 1;
-    }
-
-    50% {
-      opacity: 0.5;
-    }
-  }
-
-  .scanner-label {
-    color: white;
-    font-size: 16px;
-    font-weight: bold;
-    margin-bottom: 10px;
-    display: block;
-    text-align: center;
-  }
-
-  .product-row-highlight {
-    background-color: #d4edda !important;
-    animation: fadeIn 0.3s ease;
-  }
-
-  @keyframes fadeIn {
-    from {
-      opacity: 0;
-      transform: translateY(-10px);
-    }
-
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-
-  .quantity-editing {
-    border: 2px solid #ffc107 !important;
-    background-color: #fff9e6 !important;
-  }
-
-  .stats-badge {
-    display: inline-block;
-    padding: 5px 15px;
-    background: rgba(255, 255, 255, 0.2);
-    border-radius: 20px;
-    color: white;
-    margin: 0 5px;
-    font-weight: bold;
+  .alert-pending {
+    background: #fff3cd;
+    color: #856404;
+    padding: 10px;
+    border: 1px solid #ffeeba;
+    border-radius: 4px;
+    margin-bottom: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
   }
 </style>
 
 <div class="content-wrapper">
   <section class="content-header">
-    <h1>
-      🛒 Transaction Caisse - Mode Scanner
-    </h1>
-    <hr>
+    <div style="display:flex; justify-content:space-between;">
+      <h1>🛒 Caisse</h1>
+      <a href="pending_orders.php" class="btn btn-warning"><i class="fa fa-clock-o"></i> Voir les commandes en attente</a>
+    </div>
   </section>
 
-  <section class="content container-fluid">
+  <section class="content">
 
-    <!-- <div class="form-group">
-      <label>Recherche manuelle</label>
-      <select id="manualSelect" class="form-control">
-        <option value="">-- Sélectionner un produit --</option>
-      </select>
-    </div> -->
+    <?php if ($edit_mode): ?>
+      <div class="alert-pending">
+        <span><i class="fa fa-pencil"></i> Vous modifiez le brouillon <b>#<?php echo $edit_id; ?></b></span>
+        <a href="create_order.php" class="btn btn-sm btn-outline-warning" style="border:1px solid #856404; color:#856404;">Annuler / Nouvelle vente</a>
+      </div>
+    <?php endif; ?>
 
-
-
-    <!-- SECTION DOUBLE RECHERCHE -->
     <div class="scanner-section">
-      <div class="search-methods-container">
-        <!-- SECTION SCANNER -->
-        <div class="scanner-section">
-          <label class="scanner-label">
-            📱 SCANNER CODE-BARRE / SAISIR CODE PRODUIT
-          </label>
-          <div class="scanner-input-wrapper">
-            <input
-              type="text"
-              id="barcodeScanner"
-              placeholder="Scannez ou tapez le code produit puis Entrée..."
-              autocomplete="off"
-              autofocus>
-            <i class="fa fa-barcode scanner-icon"></i>
-          </div>
-
+      <div class="row">
+        <div class="col-md-6">
+          <label><i class="fa fa-barcode"></i> Scanner</label>
+          <input type="text" id="barcodeScanner" placeholder="Code barre..." autocomplete="off" autofocus>
         </div>
-
-        <!-- MÉTHODE 2: Recherche Manuelle -->
-        <div class="search-method">
-          <div class="search-method-title">
-            <i class="fa fa-search"></i>
-            RECHERCHE MANUELLE (Nom ou Code)
-          </div>
+        <div class="col-md-6">
+          <label><i class="fa fa-search"></i> Recherche Manuelle</label>
           <select class="form-control select2" id="manualSelect" style="width: 100%;">
-            <option value="">-- Rechercher un produit --</option>
+            <option value="">-- Choisir un produit --</option>
           </select>
         </div>
-
-      </div>
-
-      <div style="text-align: center; margin-top: 15px;">
-        <span class="stats-badge" id="itemCount">0 articles</span>
-        <span class="stats-badge" id="totalItems">0 unités</span>
       </div>
     </div>
 
+    <form action="" method="POST" id="orderForm">
+      <input type="hidden" name="invoice_id_hidden" value="<?php echo $edit_id; ?>">
 
-
-
-    <div class="box box-success">
-      <form action="" method="POST" id="orderForm">
-        <div class="box-body">
-
-          <div class="col-md-4">
-            <div class="form-group">
-              <label>Nom Opérateur</label>
-              <div class="input-group">
-                <div class="input-group-addon"><i class="fa fa-user"></i></div>
-                <input type="text" class="form-control pull-right" name="cashier_name" value="<?php echo $_SESSION['fullname']; ?>" readonly>
-              </div>
-            </div>
-          </div>
-          <div class="col-md-4">
-            <div class="form-group">
-              <label>Date de la transaction</label>
-              <div class="input-group">
-                <div class="input-group-addon"><i class="fa fa-calendar"></i></div>
-                <input type="text" class="form-control pull-right" name="orderdate" value="<?php echo date("d-m-Y"); ?>" readonly data-date-format="dd-mm-yyyy">
-              </div>
-            </div>
-          </div>
-          <div class="col-md-4">
-            <div class="form-group">
-              <label>Heure de transaction</label>
-              <div class="input-group">
-                <div class="input-group-addon"><i class="fa fa-clock-o"></i></div>
-                <input type="text" class="form-control pull-right" name="timeorder" value="<?php echo date('H:i') ?>" readonly>
-              </div>
-            </div>
-          </div>
-
-          <div class="col-md-4">
-            <div class="form-group">
-              <label for="">Client</label>
-              <select class="form-control select2" name="client" id="clientSelect" required>
-                <option value="common">Client Régulier (common)</option>
+      <div class="box box-success">
+        <div class="box-header">
+          <div class="row">
+            <div class="col-md-4">
+              <label>Client</label>
+              <select class="form-control select2" name="client" id="clientSelect">
+                <option value="common">Client Régulier</option>
                 <?php
-                $select_client = $pdo->prepare("SELECT * FROM users ORDER BY firstname");
-                $select_client->execute();
-                while ($row = $select_client->fetch(PDO::FETCH_ASSOC)) {
-                ?>
-                  <option value="<?php echo $row['username']; ?>"><?php echo $row['firstname'] . " " . $row['middlename'] . " " . $row['lastname']; ?></option>
-                <?php
+                $u = $pdo->prepare("SELECT * FROM users ORDER BY firstname");
+                $u->execute();
+                while ($r = $u->fetch(PDO::FETCH_ASSOC)) {
+                  $selected = ($r['username'] == $client_preselected) ? 'selected' : '';
+                  echo "<option value='" . $r['username'] . "' $selected>" . $r['firstname'] . " " . $r['lastname'] . "</option>";
                 }
                 ?>
               </select>
             </div>
+            <div class="col-md-4"><label>Date</label><input type="text" class="form-control" value="<?php echo date('d-m-Y'); ?>" readonly></div>
+            <div class="col-md-4"><label>Caissier</label><input type="text" class="form-control" name="cashier_name" value="<?php echo $_SESSION['fullname']; ?>" readonly></div>
           </div>
         </div>
 
-        <div class="box-body">
-          <div class="col-md-12" style="overflow-x:auto;">
-            <table class="table table-bordered table-hover" id="myOrder">
-              <thead style="background-color: #f4f4f4;">
-                <tr>
-                  <th style="width: 100px;">Code</th>
-                  <th style="width: 250px;">Libellé</th>
-                  <th style="width: 80px;">Stock</th>
-                  <th style="width: 100px;">Prix</th>
-                  <th style="width: 100px;" class="badge badge-warning">Prix Min</th>
-                  <th style="width: 70px;">Rem %</th>
-                  <th style="width: 90px;">Rem Val</th>
-                  <th style="width: 90px;">Quantité</th>
-                  <th style="width: 60px;">Unité</th>
-                  <th style="width: 120px;">Total</th>
-                  <th style="width: 60px;">
-                    <button type="button" class="btn btn-danger btn-sm" id="clearAllBtn" title="Vider le panier">
-                      <i class="fa fa-trash"></i>
-                    </button>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                <!-- Les produits seront ajoutés ici dynamiquement -->
-              </tbody>
-            </table>
-          </div>
+        <div class="box-body table-responsive">
+          <table class="table table-bordered" id="myOrder">
+            <thead>
+              <tr style="background:#f4f4f4;">
+                <th>Code</th>
+                <th>Produit</th>
+                <th>Stock</th>
+                <th>Prix</th>
+                <th>Remise %</th>
+                <th>Qté</th>
+                <th>Total</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <?php
+              // GÉNÉRATION PHP DES LIGNES SI MODE ÉDITION
+              if ($edit_mode && !empty($existing_items)) {
+                foreach ($existing_items as $item) {
+                  $remise_percent = ($item['qty'] > 0 && $item['price'] > 0) ? round(($item['remise'] / ($item['price'] * $item['qty'])) * 100) : 0;
+                  echo '<tr>
+                                        <input type="hidden" class="productid" name="productid[]" value="' . $item['product_id'] . '">
+                                        <input type="hidden" class="productstock" name="productstock[]" value="' . $item['current_stock'] . '">
+                                        <input type="hidden" class="minstock" name="minstock[]" value="' . $item['min_stock'] . '">
+                                        <input type="hidden" class="productmin" name="productmin[]" value="' . $item['min_price'] . '">
+                                        <input type="hidden" class="productsatuan" name="productsatuan[]" value="' . $item['product_satuan'] . '">
+                                        <input type="hidden" class="productremise" name="productremise[]" value="' . $item['remise'] . '"> <td><input type="text" class="form-control" name="productcode[]" value="' . $item['product_code'] . '" readonly></td>
+                                        <td><input type="text" class="form-control" name="productname[]" value="' . $item['product_name'] . '" readonly></td>
+                                        <td><span class="badge badge-info">' . $item['current_stock'] . '</span></td>
+                                        <td><input type="number" class="form-control productprice" name="productprice[]" value="' . $item['price'] . '"></td>
+                                        <td><input type="number" class="form-control discount" name="discount[]" value="' . $remise_percent . '"></td>
+                                        <td><input type="number" class="form-control quantity_product" name="quantity[]" value="' . $item['qty'] . '"></td>
+                                        <td><input type="text" class="form-control producttotal" name="producttotal[]" value="' . $item['total'] . '" readonly></td>
+                                        <td><button type="button" class="btn btn-danger btn-sm btn-remove"><i class="fa fa-times"></i></button></td>
+                                    </tr>';
+                }
+              }
+              ?>
+            </tbody>
+          </table>
         </div>
 
-        <div class="box-body">
-          <div class="col-md-offset-1 col-md-10">
-            <div class="form-group">
-              <label>Total HT (A Payer) </label>
-              <div class="input-group">
-                <input type="text" class="form-control pull-right" name="thetotal" id="thetotal" required readonly value="0.00">
-                <div class="input-group-addon"><span>FCFA</span></div>
-              </div>
+        <div class="box-footer">
+          <div class="row">
+            <div class="col-md-3">
+              <label>Total TTC</label>
+              <input type="text" class="form-control input-lg" name="total" id="total" readonly style="background:#e8f5e9; font-weight:bold;">
             </div>
-
-            <div class="form-group">
-              <label>TVA (19.25%) </label>
-              <div class="input-group">
-                <input type="text" class="form-control pull-right" name="tva" id="tva" required readonly value="0.00">
-                <div class="input-group-addon"><span>FCFA</span></div>
-              </div>
+            <div class="col-md-3">
+              <label>Reçu</label>
+              <input type="number" class="form-control input-lg" name="paid" id="paid" value="0">
             </div>
-
-            <div class="form-group">
-              <label>Total Remise (valeur)</label>
-              <div class="input-group">
-                <input type="text" class="form-control pull-right" name="remise" id="remise" required readonly value="0.00">
-                <div class="input-group-addon"><span>FCFA</span></div>
-              </div>
+            <div class="col-md-3">
+              <label>Rendu</label>
+              <input type="text" class="form-control input-lg" name="due" id="due" readonly style="background:#fff3cd;">
             </div>
-
-            <div class="form-group">
-              <label>Total TTC A Payer</label>
-              <div class="input-group">
-                <input type="text" class="form-control pull-right" name="total" id="total" required readonly value="0.00" style="font-size: 20px; font-weight: bold; background: #e8f5e9;">
-                <div class="input-group-addon"><span>FCFA</span></div>
-              </div>
-            </div>
-
-            <div class="form-group">
-              <label>Argent reçu</label>
-              <div class="input-group">
-                <input type="text" class="form-control pull-right" name="paid" id="paid" required value="0" style="font-size: 18px;">
-                <div class="input-group-addon"><span>FCFA</span></div>
-              </div>
-            </div>
-
-            <div class="form-group">
-              <label>Remboursement (Monnaie)</label>
-              <div class="input-group">
-                <input type="text" class="form-control pull-right" name="due" id="due" required readonly value="0.00" style="font-size: 18px; background: #fff3cd;">
-                <div class="input-group-addon"><span>FCFA</span></div>
-              </div>
-            </div>
-
-            <div class="form-group">
-              <label>Mode Paiement</label>
-              <select class="form-control" name="payment_mode" id="paymentMode" required>
+            <div class="col-md-3">
+              <label>Paiement</label>
+              <select class="form-control input-lg" name="payment_mode" id="paymentMode">
                 <option value="especes">Espèces</option>
                 <option value="orange_money">Orange Money</option>
                 <option value="mtn_money">MTN Money</option>
                 <option value="carte_visa">Carte Visa</option>
-                <option value="virement">Virement</option>
               </select>
             </div>
           </div>
-        </div>
 
-        <div class="box-footer" align="center">
-          <input type="submit" name="save_order" value="💾 Enregistrer Opération (F9)" id="saveOrderBtn" class="btn btn-success btn-lg" onclick="return confirm('Êtes-vous sûr de vouloir enregistrer cette transaction ?')">
-          <a href="order.php" class="btn btn-warning btn-lg">Annuler</a>
+          <input type="hidden" name="tva" id="tva">
+          <input type="hidden" name="remise" id="remise">
+
+          <div class="text-center" style="margin-top:20px;">
+            <button type="submit" name="hold_order" class="btn btn-info btn-lg">⏸️ Mettre en Attente (F7)</button>
+            <button type="submit" name="save_order" id="saveOrderBtn" class="btn btn-success btn-lg" onclick="return confirm('Confirmer la vente ?')">💾 Encaisser (F9)</button>
+          </div>
         </div>
-      </form>
-    </div>
+      </div>
+    </form>
   </section>
 </div>
 
 <script>
   $(document).ready(function() {
 
-    let scanTimeout;
-    let currentEditingRow = null;
-
-    // ========================================
-    // FONCTION : Scanner de code-barre
-    // ========================================
-    $('#barcodeScanner').on('keypress', function(e) {
-      if (e.which === 13) { // Touche Entrée
-        e.preventDefault();
-
-        const barcode = $(this).val().trim();
-
-        if (barcode === '') {
-          return;
-        }
-
-        // Rechercher le produit par code
-        searchProductByCode(barcode);
-
-        // Vider le champ
-        $(this).val('');
-      }
-    });
-
-    // Charger la liste des produits
+    // --- 1. CHARGEMENT LISTE PRODUITS (Pour recherche manuelle) ---
     $.ajax({
       url: "get_all_products.php",
       method: "GET",
       dataType: "json",
       success: function(data) {
         data.forEach(function(p) {
-          $("#manualSelect").append(
-            `<option value="${p.product_code}">${p.product_code} – ${p.product_name}</option>`
-          );
+          $("#manualSelect").append(`<option value="${p.product_code}">${p.product_code} – ${p.product_name}</option>`);
         });
       }
     });
 
-    // Lorsqu’un produit est sélectionné
-    $("#manualSelect").on("change", function() {
-      const code = $(this).val();
-      if (!code) return;
-
-      // Insère le code dans le champ scanner
-      $("#barcodeScanner").val(code);
-
-      // Déclenche le même comportement que le scan
-      $("#barcodeScanner").trigger("keyup");
-
-      // Réinitialise le select pour éviter une confusion
-      $(this).val("");
+    $("#manualSelect").change(function() {
+      let code = $(this).val();
+      if (code) {
+        searchProduct(code);
+        $(this).val('');
+      }
     });
 
-    // ========================================
-    // FONCTION : Recherche produit par code
-    // ========================================
-    function searchProductByCode(code) {
+    // --- 2. SCANNER ---
+    $('#barcodeScanner').keypress(function(e) {
+      if (e.which === 13) {
+        e.preventDefault();
+        let code = $(this).val();
+        if (code) searchProduct(code);
+        $(this).val('');
+      }
+    });
+
+    // --- 3. FONCTIONS LOGIQUES ---
+    function searchProduct(code) {
       $.ajax({
         url: 'get_product_by_code.php',
         method: 'POST',
@@ -575,381 +377,139 @@ if (isset($_POST['save_order'])) {
         },
         success: function(data) {
           if (data && data.product_id) {
-            addOrUpdateProduct(data);
+            addRow(data);
           } else {
-            // Produit non trouvé - son d'erreur et alerte
-            playErrorSound();
-            showNotification('❌ Produit non trouvé: ' + code, 'error');
+            alert('Produit non trouvé');
           }
-        },
-        error: function() {
-          playErrorSound();
-          showNotification('⚠️ Erreur de communication avec le serveur', 'error');
         }
       });
     }
 
-    // ========================================
-    // FONCTION : Ajouter ou mettre à jour produit
-    // ========================================
-    function addOrUpdateProduct(data) {
-      const productId = data.product_id;
-      let existingRow = null;
+    function addRow(data) {
+      // Vérifier si existe déjà
+      let exists = false;
+      $('.productid').each(function() {
+        if ($(this).val() == data.product_id) {
+          let row = $(this).closest('tr');
+          let qtyInput = row.find('.quantity_product');
+          let currentQty = parseInt(qtyInput.val());
+          let stock = parseInt(row.find('.productstock').val());
 
-      // Vérifier si le produit existe déjà
-      $('#myOrder tbody tr').each(function() {
-        if ($(this).find('.productid').val() == productId) {
-          existingRow = $(this);
-          return false;
+          if (currentQty < stock) {
+            qtyInput.val(currentQty + 1).trigger('change');
+          } else {
+            alert("Stock insuffisant !");
+          }
+          exists = true;
         }
       });
 
-      if (existingRow) {
-        // Produit existe - incrémenter la quantité
-        updateExistingProduct(existingRow, data);
-      } else {
-        // Nouveau produit - ajouter une ligne
-        addNewProduct(data);
+      if (!exists) {
+        let html = `<tr>
+                <input type="hidden" class="productid" name="productid[]" value="${data.product_id}">
+                <input type="hidden" class="productstock" name="productstock[]" value="${data.stock}">
+                <input type="hidden" class="minstock" name="minstock[]" value="${data.min_stock}">
+                <input type="hidden" class="productmin" name="productmin[]" value="${data.min_price}">
+                <input type="hidden" class="productsatuan" name="productsatuan[]" value="${data.product_satuan}">
+                <input type="hidden" class="productremise" name="productremise[]" value="0">
+                
+                <td><input type="text" class="form-control" name="productcode[]" value="${data.product_code}" readonly></td>
+                <td><input type="text" class="form-control" name="productname[]" value="${data.product_name}" readonly></td>
+                <td><span class="badge badge-info">${data.stock}</span></td>
+                <td><input type="number" class="form-control productprice" name="productprice[]" value="${data.sell_price}"></td>
+                <td><input type="number" class="form-control discount" name="discount[]" value="${data.discount}"></td>
+                <td><input type="number" class="form-control quantity_product" name="quantity[]" value="1"></td>
+                <td><input type="text" class="form-control producttotal" name="producttotal[]" readonly></td>
+                <td><button type="button" class="btn btn-danger btn-sm btn-remove"><i class="fa fa-times"></i></button></td>
+            </tr>`;
+        $('#myOrder tbody').append(html);
+        $('#myOrder tbody tr:last .quantity_product').trigger('change'); // Pour calculer le premier total
       }
-
-      // Son de succès
-      playSuccessSound();
-
-      // Remettre le focus sur le scanner
-      setTimeout(function() {
-        $('#barcodeScanner').focus();
-      }, 100);
     }
 
-    // ========================================
-    // FONCTION : Mettre à jour produit existant
-    // ========================================
-    function updateExistingProduct(row, data) {
-      const currentQty = parseInt(row.find('.quantity_product').val()) || 0;
-      const maxStock = parseInt(row.find('.productstock').val()) || 0;
-      let newQty = currentQty + 1;
-
-      if (newQty > maxStock) {
-        if (currentQty < maxStock) {
-          newQty = maxStock;
-          showNotification('⚠️ Quantité ajustée au stock max (' + maxStock + ')', 'warning');
-        } else {
-          playErrorSound();
-          showNotification('❌ Stock insuffisant pour ' + data.product_name, 'error');
-          return;
-        }
-      }
-
-      // Highlight temporaire
-      row.addClass('product-row-highlight');
-      setTimeout(function() {
-        row.removeClass('product-row-highlight');
-      }, 800);
-
-      row.find('.quantity_product').val(newQty).trigger('change');
-      showNotification('✅ Quantité mise à jour: ' + data.product_name + ' (x' + newQty + ')', 'success');
-    }
-
-
-
-    // ========================================
-    // FONCTION : Ajouter nouveau produit
-    // ========================================
-    function addNewProduct(data) {
-      const html = `
-      <tr class="product-row-highlight">
-        <input type="hidden" class="productid" name="productid[]" value="${data.product_id}">
-        <input type="hidden" class="productstock" name="productstock[]" value="${data.stock}">
-        <input type="hidden" class="minstock" name="minstock[]" value="${data.min_stock}">
-        
-        <td><input type="text" class="form-control productcode" name="productcode[]" value="${data.product_code}" readonly></td>
-        <td><input type="text" class="form-control productname" name="productname[]" value="${data.product_name}" readonly></td>
-        <td><span class="badge badge-info">${data.stock}</span></td>
-        <td><input type="text" class="form-control productprice" name="productprice[]" value="${data.sell_price}" style="width:100px;"></td>
-        <td><input type="text" class="form-control productmin" name="productmin[]" value="${data.min_price}" readonly style="width:100px;"></td>
-        <td><input type="text" class="form-control discount" name="discount[]" value="${data.discount}" style="width:70px;"></td>
-        <td><input type="text" class="form-control remise" name="productremise[]" value="0" readonly style="width:90px;"></td>
-        <td><input type="number" min="1" class="form-control quantity_product" name="quantity[]" value="1" style="width:90px;"></td>
-        <td><input type="text" class="form-control productsatuan" name="productsatuan[]" value="${data.product_satuan}" readonly style="width:60px;"></td>
-        <td><input type="text" class="form-control producttotal" name="producttotal[]" value="0" readonly style="width:120px;"></td>
-        <td><button type="button" class="btn btn-danger btn-sm btn-remove"><i class="fa fa-times"></i></button></td>
-      </tr>
-    `;
-
-      $('#myOrder tbody').append(html);
-
-      // Calculer le total pour cette ligne
-      const newRow = $('#myOrder tbody tr:last');
-      newRow.find('.quantity_product').trigger('change');
-
-      // Retirer le highlight après animation
-      setTimeout(function() {
-        newRow.removeClass('product-row-highlight');
-      }, 800);
-
-      showNotification('✅ Produit ajouté: ' + data.product_name, 'success');
-      updateStats();
-    }
-
-    // ========================================
-    // FONCTION : Calculs et gestion quantité/prix
-    // ========================================
+    // --- 4. CALCULS AUTOMATIQUES ---
     $(document).on('keyup change', '.quantity_product, .productprice, .discount', function() {
-      const tr = $(this).closest('tr');
-      let quantity = parseInt(tr.find('.quantity_product').val()) || 0;
-      const price = parseFloat(tr.find('.productprice').val()) || 0;
-      const discount_rate = parseFloat(tr.find('.discount').val()) / 100 || 0;
-      const max_stock = parseInt(tr.find('.productstock').val()) || 0;
-      const min_price = parseFloat(tr.find('.productmin').val()) || 0;
+      let row = $(this).closest('tr');
+      let qty = parseInt(row.find('.quantity_product').val()) || 0;
+      let price = parseFloat(row.find('.productprice').val()) || 0;
+      let discPercent = parseFloat(row.find('.discount').val()) || 0;
+      let stock = parseInt(row.find('.productstock').val());
 
-      // Validation stock
-      if (quantity > max_stock) {
-        quantity = max_stock;
-        tr.find('.quantity_product').val(quantity);
-        showNotification('⚠️ Quantité limitée au stock disponible', 'warning');
+      // Controle stock
+      if (qty > stock) {
+        row.find('.quantity_product').val(stock);
+        qty = stock;
+        alert('Stock Max atteint');
+      }
+      if (qty < 1) {
+        row.find('.quantity_product').val(1);
+        qty = 1;
       }
 
-      if (quantity < 1) {
-        quantity = 1;
-        tr.find('.quantity_product').val(quantity);
-      }
+      // Calculs ligne
+      let discValue = (price * qty * discPercent) / 100;
+      let total = (price * qty) - discValue;
 
-      // Validation prix minimum
-      if (price < min_price) {
-        showNotification('❌ Prix inférieur au prix minimum (' + min_price + ')', 'error');
-        tr.find('.productprice').css('border-color', 'red');
-      } else {
-        tr.find('.productprice').css('border-color', '');
-      }
+      row.find('.productremise').val(discValue.toFixed(2));
+      row.find('.producttotal').val(total.toFixed(2));
 
-      // Calculs
-      const total_net = (1 - discount_rate) * quantity * price;
-      const remise_val = discount_rate * quantity * price;
-
-      tr.find('.producttotal').val(total_net.toFixed(2));
-      tr.find('.remise').val(remise_val.toFixed(2));
-
-      calculate(parseFloat($('#paid').val()));
-      updateStats();
+      calculateGlobal();
     });
 
-    // ========================================
-    // FONCTION : Suppression produit
-    // ========================================
     $(document).on('click', '.btn-remove', function() {
       $(this).closest('tr').remove();
-      calculate(parseFloat($('#paid').val()));
-      updateStats();
-      showNotification('🗑️ Produit retiré du panier', 'info');
+      calculateGlobal();
     });
 
-    // ========================================
-    // FONCTION : Vider tout le panier
-    // ========================================
-    $('#clearAllBtn').on('click', function() {
-      if (confirm('Voulez-vous vraiment vider tout le panier ?')) {
-        $('#myOrder tbody').empty();
-        calculate(0);
-        updateStats();
-        $('#barcodeScanner').focus();
-        showNotification('🗑️ Panier vidé', 'info');
-      }
+    $('#paid').keyup(function() {
+      calculateGlobal();
     });
 
-    // ========================================
-    // FONCTION : Calcul des totaux
-    // ========================================
-    function calculate(paid) {
-      let total_net_apres_remise = 0;
-      let total_remise_valeur = 0;
-      const tva_rate = 0.1925;
+    function calculateGlobal() {
+      let net = 0;
+      let totalRemise = 0;
 
       $('.producttotal').each(function() {
-        total_net_apres_remise += (parseFloat($(this).val()) || 0);
+        net += parseFloat($(this).val()) || 0;
+      });
+      $('.productremise').each(function() {
+        totalRemise += parseFloat($(this).val()) || 0;
       });
 
-      $('.remise').each(function() {
-        total_remise_valeur += (parseFloat($(this).val()) || 0);
-      });
+      let paid = parseFloat($('#paid').val()) || 0;
+      let due = paid - net;
 
-      const total_ttc_avant_remise = total_net_apres_remise + total_remise_valeur;
-      const total_ht_avant_tva = total_ttc_avant_remise / (1 + tva_rate);
-      const tva = total_ttc_avant_remise - total_ht_avant_tva;
-      const total_ttc_a_payer = total_net_apres_remise;
-      const due = (parseFloat(paid) || 0) - total_ttc_a_payer;
-
-      $('#thetotal').val(total_ht_avant_tva.toFixed(2));
-      $('#remise').val(total_remise_valeur.toFixed(2));
-      $('#tva').val(tva.toFixed(2));
-      $('#total').val(total_ttc_a_payer.toFixed(2));
+      $('#total').val(net.toFixed(2));
+      $('#remise').val(totalRemise.toFixed(2));
+      $('#tva').val((net * 0.1925).toFixed(2)); // Juste informatif
       $('#due').val(due.toFixed(2));
 
-      // Validation paiement
-      if ((parseFloat(paid) || 0) < parseFloat(total_ttc_a_payer.toFixed(2))) {
-        $('#paid').css('border-color', 'red');
+      if (paid < net) {
         $('#saveOrderBtn').prop('disabled', true);
+        $('#paid').css('border', '2px solid red');
       } else {
-        $('#paid').css('border-color', '');
         $('#saveOrderBtn').prop('disabled', false);
+        $('#paid').css('border', '1px solid #ccc');
       }
     }
 
-    // ========================================
-    // FONCTION : Mise à jour statistiques
-    // ========================================
-    function updateStats() {
-      const itemCount = $('#myOrder tbody tr').length;
-      let totalUnits = 0;
+    // --- 5. INITIALISATION AU CHARGEMENT (Important pour le mode édition) ---
+    // On force le recalcul de chaque ligne pour mettre à jour les totaux si on vient de charger une commande
+    $('.quantity_product').trigger('change');
 
-      $('.quantity_product').each(function() {
-        totalUnits += parseInt($(this).val()) || 0;
-      });
-
-      $('#itemCount').text(itemCount + ' article' + (itemCount > 1 ? 's' : ''));
-      $('#totalItems').text(totalUnits + ' unité' + (totalUnits > 1 ? 's' : ''));
-    }
-
-    // ========================================
-    // FONCTION : Notifications
-    // ========================================
-    function showNotification(message, type) {
-      const bgColor = {
-        'success': '#28a745',
-        'error': '#dc3545',
-        'warning': '#ffc107',
-        'info': '#17a2b8'
-      };
-
-      const notification = $('<div>')
-        .css({
-          position: 'fixed',
-          top: '20px',
-          right: '20px',
-          padding: '15px 25px',
-          backgroundColor: bgColor[type] || '#333',
-          color: 'white',
-          borderRadius: '5px',
-          zIndex: 9999,
-          boxShadow: '0 4px 6px rgba(0,0,0,0.3)',
-          fontWeight: 'bold',
-          minWidth: '300px'
-        })
-        .text(message)
-        .appendTo('body')
-        .fadeIn(300);
-
-      setTimeout(function() {
-        notification.fadeOut(300, function() {
-          $(this).remove();
-        });
-      }, 3000);
-    }
-
-    // ========================================
-    // FONCTION : Sons
-    // ========================================
-    function playSuccessSound() {
-      // Son de succès (optionnel - nécessite fichier audio)
-      // const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBTGH0fPTgjMGHm7A7+OZUQ0PVKzn77BdGAk+ltryxnMpBSuAzvLZiTYIG2m98OScTgwPUKXh8bllHAU4jtfzyn0tBSh+y/DcjkELFF+08OyrWBYKRZ3e8sFuJAUxhtHz1YU2Bhxqvu7mnFEOD1Gp5O+zYBoJPJPY88p2KwYvf8rx24xACBVgsO7oqlYUCkSb3PLDcSYFMYXQ8taGNQYbal/u5p5SDQ9Qpt/xuWUdBTiO1vPKfywEKH3K8N2RQwwSXbfv66xbGQlDmtvyxXQrBS5+zPHajUIIFWGu7uipVRYKRJvb88N1LAUxhdHz1YY2Bhxpvu3mnVIND1Cm3/G5ZRsFOI/Y88p+LQQogcjw3I9FCRVfsvDrsV8bCkOY2PXEdiwGLn3J8dqORAcVYa7t6KpXFgpFm9rxw3YsBTGF0PPVhzUGHGq+7OadUw4OUKXd8blnHgU4j9fzzH4tBCh+yPDcj0YKFV6v7+uxYRwKQ5jW88Z2LAYuf8rx24xBBxVgrOrpq1oXCkSa2fHDeywGMYXN8teINgYcaLvs5pxSDg5Pps/wuWgfBTiP1vPMfi0EKH7I8N2RQgsVXrLu67JjGglDl9Twxnkrhi5+yPHajUIIFWGu7OirWhgJRJnY8cN3LAcxhcvz2Ig2BRxovOvlnFMPDk+jze+6aR8GN43U8sz+LQUpfsjw3Y9ECxVfsOzqsmIdCUOW0u/HeiuGLn/K8duNRAgVYa3r6axbFwpEldjxw3ksByiBxvPZiTUFHGm96+SbUxAOTqHM7rpqIQc2jdTxxn4tBSl+x/DdkEQMFF6v7OqyYhwJQ5XQ7sd7K4YufsvQ241DCBVgrOrpq1wXCUSa2vHDei0HKoHE8tmKNQUcab3r5ZtUEA5NoMrsumoiBjaNzfHGfywFKX/I8d2QRQsUXq/r6rNiHAlDlM/tx3sshy1+y/DbjkQJFWCr6+usXBgJRZrZ88N6LQYqgsLy2Yk2BRxpv+vkm1UQDL6iye26ax8GNY3M8cb+LAUpf8jw3ZBFDBVeruvqtGQdCUKUzu3HfC2HL37M8NyNRQgUYKrq66tcGApFmtj0w3suBiqCwPPaiTUFG2q/6+SbVhEMTaHI7LtrIAY1jc3xxn8sByqAx/HdkEYMFF6u6+q0ZB0JQpPM7cd8LYYufszw3I5FCBRgqenrq10ZCkaZ1/PDey4HKoHA89qKNgUbab/r5JxWEAxNoMjrumsfBzSNzfDFfywHKoDH8d2RRgsUXq7r6rRlHglCks/ux30thS5+zPDdjUUIFGCp6euqXhoJRprX88N8LggqgsDy2Yo1BRtqv+vknFYRDE2gx+y6ax8HNIzM8MV/LQcqf8jw3pFGDRNdrevqtGUeCkKSzu3HfS2GLn7M8N2NRwcUYKjo66teGQlGmdfzw34uByqCv/LZizUEG2q+6uOcVxEMTKDH6rpsIQczi8zwxH8tByp/x+/ekUYNE12t6+q0Zh4KQpLO7cd9LYYufszw3Y5HBxRgqefrqV8aCUaZ1vPDfi4HKoK/8tqLNAQbarvq45xYEgxMoMfquW0iBzOMzPDEfy4HKn7H79yRRg0TXazr6rRmHwpBkc7sx3wvhy9+y/DdjkcHFF+o5uupYBoKRZjV88N/LwcqgrLy2Ys0BBtp vurjnVgSDEyfxuq5bSMHM4vL8MN/LwcrfsTv3JFHDBNerOvqtGcfCkGRzuvIey+HL3/L8N6OSQcUXqfl66lgGwtFlND0xH8tByu Cvu3Tay4JI37L8NySRw0SXazr6rRnHwpBkM3qx3wvhy5/zPDejkgIF16r5+ylYRwMRZLP8sR/LQcsgrvx2owzBBpp++rhni");
-      // audio.play().catch(e => console.log('Audio play failed'));
-    }
-
-    function playErrorSound() {
-      // Son d'erreur - utiliser Web Audio API pour générer un bip d'erreur
-      try {
-        const audioContext = new(window.AudioContext || window.webkitAudioContext)();
-        const oscillator = audioContext.createOscillator();
-        const gainNode = audioContext.createGain();
-        oscillator.connect(gainNode);
-        gainNode.connect(audioContext.destination);
-        oscillator.frequency.value = 400;
-        oscillator.type = 'sine';
-        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
-        oscillator.start(audioContext.currentTime);
-        oscillator.stop(audioContext.currentTime + 0.3);
-      } catch (e) {
-        console.log('Audio play failed');
-      }
-    }
-
-    // ========================================
-    // GESTION PAIEMENT
-    // ========================================
-    $('#paid').on('keyup change', function() {
-      const paid = parseFloat($(this).val()) || 0;
-      calculate(paid);
-    });
-
-    // ========================================
-    // RACCOURCIS CLAVIER
-    // ========================================
-    $(document).on('keydown', function(e) {
-      // F2 - Focus sur scanner
-      if (e.key === 'F2') {
+    // Raccourcis Clavier
+    $(document).keydown(function(e) {
+      if (e.key == "F7") {
         e.preventDefault();
-        $('#barcodeScanner').focus();
+        $("button[name='hold_order']").click();
       }
-
-      // F9 - Sauvegarder commande
-      if (e.key === 'F9') {
+      if (e.key == "F9") {
         e.preventDefault();
-        if (!$('#saveOrderBtn').prop('disabled')) {
-          if (confirm('Êtes-vous sûr de vouloir enregistrer cette transaction ?')) {
-            $('#orderForm').submit();
-          }
-        }
-      }
-
-      // ESC - Annuler et retour au scanner
-      if (e.key === 'Escape') {
-        $('#barcodeScanner').focus();
+        $("#saveOrderBtn").click();
       }
     });
-
-    // ========================================
-    // VALIDATION FORMULAIRE
-    // ========================================
-    $('#orderForm').on('submit', function(e) {
-      const totalTTC = parseFloat($('#total').val()) || 0;
-      const paidAmount = parseFloat($('#paid').val()) || 0;
-      const itemCount = $('#myOrder tbody tr').length;
-
-      if (itemCount === 0) {
-        e.preventDefault();
-        swal('Erreur', 'Aucun produit dans le panier.', 'error');
-        return false;
-      }
-
-      calculate(paidAmount);
-
-      if (paidAmount < totalTTC) {
-        e.preventDefault();
-        swal('Erreur de Paiement', 'Le montant d\'argent reçu (' + paidAmount.toFixed(2) + ' FCFA) est inférieur au total TTC à payer (' + totalTTC.toFixed(2) + ' FCFA). Veuillez ajuster le montant reçu.', 'error');
-        $('#paid').focus();
-        return false;
-      }
-
-      return true;
-    });
-
-    // ========================================
-    // INITIALISATION
-    // ========================================
-    calculate(0);
-    updateStats();
-    $('#barcodeScanner').focus();
-
-    // Garder le focus sur le scanner
-    setInterval(function() {
-      if (!$(':focus').is('input[type="number"], #paid, #paymentMode, #clientSelect')) {
-        $('#barcodeScanner').focus();
-      }
-    }, 200000);
 
   });
 </script>
 
-<?php
-include_once 'inc/footer_all.php';
-?>
+<?php include_once 'inc/footer_all.php'; ?>

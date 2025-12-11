@@ -90,7 +90,7 @@ if ($id) {
 }
 
 // Définir les paramètres POST pour l'exportation
-$export_params = http_build_query($_POST);
+$export_params = http_build_query($_GET);
 
 // --- 4. GESTION DU FILTRE DE STATUT (Visualisation) ---
 // Par défaut on affiche 'saved', sinon on prend la valeur passée en GET
@@ -248,7 +248,9 @@ include("include/stat_op_caisse.php");
         </div>
     </div>
 </section>
-
+</div>
+</section>
+</div>
 <script>
     $(document).ready(function() {
         $('#myOrder').DataTable();
