@@ -1,14 +1,7 @@
 <?php
 // print_current_view.php
-
-
-// Inclure la connexion à la base de données
 include_once 'db/connect_db.php';
-
-// Désactiver l'affichage des erreurs
 error_reporting(0);
-
-// --- LOGIQUE DE FILTRES ---
 
 $sql = "SELECT * FROM tbl_invoice";
 $conditions = [];
@@ -18,20 +11,20 @@ $magasin = $_SESSION['magasin'] ?? '';
 $role = $_SESSION['role'] ?? '';
 
 // Récupérer les paramètres GET
-$leshop = $_GET['shop'] ?? null;
+$leshop = $_GET['shop'] ?? 'all';
 $fromdate = $_GET['date_1'] ?? null;
 $todate = $_GET['date_2'] ?? null;
 $view_status = $_GET['view_status'] ?? 'saved';
+$op_filter = $_GET['operator_filter'] ?? 'all'; // Nouveau
 
-// Titre du rapport selon le statut
 $status_label = ($view_status == 'canceled') ? 'ANNULÉES' : 'VALIDÉES';
 $filter_summary = "Liste des transactions **" . $status_label . "**";
 
-// 1. Filtre par Statut
+// 1. Statut
 $conditions[] = "status = :status";
 $params[':status'] = $view_status;
 
-// 2. Filtre par Date
+// 2. Date
 if ($fromdate && $todate) {
     $conditions[] = "order_date BETWEEN :fromdate AND :todate";
     $params[':fromdate'] = $fromdate;
@@ -39,23 +32,26 @@ if ($fromdate && $todate) {
     $filter_summary .= " du **$fromdate** au **$todate**";
 }
 
-// 3. Filtre par Magasin (Sur la colonne 'user')
+// 3. Magasin
 if ($role == "Admin") {
-    if ($leshop && $leshop != "all") {
+    if ($leshop != "all") {
         $conditions[] = "user IN (SELECT username FROM tbl_user WHERE magasin = :leshop)";
         $params[':leshop'] = $leshop;
-        $filter_summary .= " pour le magasin **$leshop**";
-    } else {
-        $filter_summary .= " pour **Tous les magasins**";
+        $filter_summary .= " | Magasin: **$leshop**";
     }
 } else {
-    // Opérateur/Responsable ne voit que son magasin
     $conditions[] = "user IN (SELECT username FROM tbl_user WHERE magasin = :magasin)";
     $params[':magasin'] = $magasin;
-    $filter_summary .= " pour le magasin **$magasin**";
+    $filter_summary .= " | Magasin: **$magasin**";
 }
 
-// Construction finale SQL
+// 4. NOUVEAU: Filtre Opérateur
+if ($op_filter != 'all') {
+    $conditions[] = "user = :op_user";
+    $params[':op_user'] = $op_filter;
+    $filter_summary .= " | Opérateur: **$op_filter**";
+}
+
 if (!empty($conditions)) {
     $sql .= " WHERE " . implode(" AND ", $conditions);
 }
@@ -69,7 +65,6 @@ try {
     die("Erreur de requête SQL : " . $e->getMessage());
 }
 ?>
-
 <!DOCTYPE html>
 <html lang="fr">
 

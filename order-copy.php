@@ -173,50 +173,37 @@ include("include/stat_op_caisse.php");
                     <tbody>
                         <?php
                         $no = 1;
-                        // ... (Top of order.php remains same until SQL construction) ...
-
                         $sql = "SELECT * FROM tbl_invoice";
                         $conditions = [];
                         $params = [];
 
-                        // --- 1. FILTRE PAR STATUT ---
+                        // --- 1. FILTRE PAR STATUT (saved vs canceled) ---
                         $conditions[] = "status = :status";
                         $params[':status'] = $view_status;
 
-                        // --- FILTRES DATE, SHOP & OPERATOR ---
+                        // --- FILTRES DATE ET SHOP ---
+                        if (isset($_POST['date_filter'])) {
+                            $leshop = $_POST['shop'] ?? 'all';
 
-                        // Récupération des inputs
-                        $leshop = $_REQUEST['shop'] ?? 'all';
-                        $op_filter = $_REQUEST['operator_filter'] ?? 'all'; // Nouveau
-                        $date1 = $_REQUEST['date_1'] ?? '';
-                        $date2 = $_REQUEST['date_2'] ?? '';
-
-                        // Application du filtre date si demandé
-                        if (isset($_POST['date_filter']) || (isset($_GET['date_1']) && isset($_GET['date_2']))) {
                             $conditions[] = "order_date BETWEEN :fromdate AND :todate";
-                            $params[':fromdate'] = $date1;
-                            $params[':todate'] = $date2;
-                        }
+                            $params[':fromdate'] = $_POST['date_1'];
+                            $params[':todate'] = $_POST['date_2'];
 
-                        // Logique Magasin
-                        if (($_SESSION['role'] ?? '') == "Admin") {
-                            if ($leshop != "all") {
+                            if (($_SESSION['role'] ?? '') == "Admin" && $leshop != "all") {
                                 $conditions[] = "user IN (SELECT username FROM tbl_user WHERE magasin = :leshop)";
                                 $params[':leshop'] = $leshop;
+                            } elseif (($_SESSION['role'] ?? '') != "Admin") {
+                                $conditions[] = "user IN (SELECT username FROM tbl_user WHERE magasin = :magasin)";
+                                $params[':magasin'] = $magasin;
                             }
                         } else {
-                            // Non-Admin : restreint à son magasin
-                            $conditions[] = "user IN (SELECT username FROM tbl_user WHERE magasin = :magasin)";
-                            $params[':magasin'] = $magasin;
+                            if (($_SESSION['role'] ?? '') != "Admin") {
+                                $conditions[] = "user IN (SELECT username FROM tbl_user WHERE magasin = :magasin)";
+                                $params[':magasin'] = $magasin;
+                            }
                         }
 
-                        // NOUVEAU: Logique Opérateur Spécifique
-                        if ($op_filter != 'all') {
-                            $conditions[] = "user = :op_user";
-                            $params[':op_user'] = $op_filter;
-                        }
-
-                        // Construction finale
+                        // Construction finale de la requête
                         if (!empty($conditions)) {
                             $sql .= " WHERE " . implode(" AND ", $conditions);
                         }
@@ -268,6 +255,7 @@ include("include/stat_op_caisse.php");
     </div>
 </section>
 </div>
+
 
 
 
