@@ -1,5 +1,6 @@
 <?php
-// Inclure la connexion à la base de données
+// order.php
+
 include_once 'db/connect_db.php';
 
 // Vérification de la session utilisateur
@@ -90,11 +91,11 @@ if ($id) {
 }
 
 // Définir les paramètres POST pour l'exportation
-$export_params = http_build_query($_GET);
+$export_params = http_build_query($_REQUEST);
 
 // --- 4. GESTION DU FILTRE DE STATUT (Visualisation) ---
 // Par défaut on affiche 'saved', sinon on prend la valeur passée en GET
-$view_status = $_GET['view_status'] ?? 'saved';
+$view_status = $_REQUEST['view_status'] ?? 'saved';
 ?>
 
 <html>
@@ -136,8 +137,13 @@ include("include/stat_op_caisse.php");
                 <button type="button" onclick="downloadFile('export_excel.php', '<?php echo $export_params; ?>')" class="btn btn-success btn-sm" style="margin-right: 5px;" title="Excel">
                     <i class="fa fa-file-excel-o"></i> Excel
                 </button>
-
-                <a href="create_order.php" class="btn btn-info btn-sm">Nouvelle Transaction</a>
+                <?php
+                if ($_SESSION["role"] == "Operator") {
+                ?>
+                    <a href="create_order.php" class="btn btn-info btn-sm">Nouvelle Transaction</a>
+                <?php
+                }
+                ?>
             </div>
 
             <?php

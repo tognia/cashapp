@@ -1,4 +1,5 @@
 <?php
+// export_sales_pdf.php
 // Inclure la librairie FPDF
 require('./fpdf/fpdf.php');
 // Inclure la connexion à la base de données

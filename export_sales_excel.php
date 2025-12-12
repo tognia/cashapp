@@ -1,4 +1,6 @@
 <?php
+// export_sales_excel.php
+
 // Démarrer la mise en tampon de sortie pour éviter les problèmes d'en-tête (headers already sent) 
 // causés par des messages d'erreur (Notices, Warnings) ou des espaces blancs accidentels.
 ob_start();

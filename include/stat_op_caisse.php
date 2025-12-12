@@ -1,3 +1,4 @@
+<!-- stat_op_caisse.php -->
 <div class="content-wrapper">
   <section class="content-header">
     <h1>
@@ -22,8 +23,8 @@
     <div class="box box-success">
       <form action="" method="POST" autocomplete="off">
         <div class="box-header with-border">
-          <h3 class="box-title">Date Début : <?php echo isset($_POST['date_filter']) ? $_POST['date_1'] : $today; ?></h3>
-          <h3 class="box-title">Date Fin : <?php echo isset($_POST['date_filter']) ? $_POST['date_2'] : $today; ?></h3>
+          <h3 class="box-title"><?php echo isset($_POST['date_filter']) ? "Date Début : " . $_POST['date_1'] : ""; ?></h3>
+          <h3 class="box-title"><?php echo isset($_POST['date_filter']) ? "Date Fin : " . $_POST['date_2'] : ""; ?></h3>
         </div>
 
         <div class="box-body">
