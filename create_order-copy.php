@@ -36,11 +36,11 @@ if (isset($_GET['edit_id'])) {
   if ($invoice_data) {
     $client_preselected = $invoice_data['id_client'];
 
-    // --- SENIOR DEV UPDATE: Added s.img to the query ---
-    $stmt_details = $pdo->prepare("SELECT d.*, s.stock as current_stock, s.min_stock, s.min_price, s.img 
-                                     FROM tbl_invoice_detail d 
-                                     JOIN tbl_shop_item s ON d.product_id = s.product_id 
-                                     WHERE d.invoice_id = :id");
+    // Récupérer les produits et joindre avec le stock actuel pour vérification
+    $stmt_details = $pdo->prepare("SELECT d.*, s.stock as current_stock, s.min_stock, s.min_price 
+                                       FROM tbl_invoice_detail d 
+                                       JOIN tbl_shop_item s ON d.product_id = s.product_id 
+                                       WHERE d.invoice_id = :id");
     $stmt_details->execute([':id' => $edit_id]);
     $existing_items = $stmt_details->fetchAll(PDO::FETCH_ASSOC);
   }
@@ -97,7 +97,7 @@ if (isset($_POST['save_order']) || isset($_POST['hold_order'])) {
           ':id' => $invoice_id_process
         ]);
 
-        // On supprime les anciens détails pour réinsérer les nouveaux
+        // On supprime les anciens détails pour réinsérer les nouveaux (plus simple que update ligne par ligne)
         $pdo->exec("DELETE FROM tbl_invoice_detail WHERE invoice_id = $invoice_id_process");
         $new_invoice_id = $invoice_id_process;
       } else {
@@ -134,7 +134,7 @@ if (isset($_POST['save_order']) || isset($_POST['hold_order'])) {
 
         // Insertion détail
         $ins_det = $pdo->prepare("INSERT INTO tbl_invoice_detail(invoice_id, product_id, product_code, product_name, qty, product_satuan, price, total, order_date, remise)
-                                     VALUES(:inv, :pid, :pcode, :pname, :qty, :unit, :price, :tot, :date, :rem)");
+                                          VALUES(:inv, :pid, :pcode, :pname, :qty, :unit, :price, :tot, :date, :rem)");
         $ins_det->execute([
           ':inv' => $new_invoice_id,
           ':pid' => $arr_product_id[$i],
@@ -193,21 +193,6 @@ if (isset($_POST['save_order']) || isset($_POST['hold_order'])) {
     display: flex;
     justify-content: space-between;
     align-items: center;
-  }
-
-  /* --- SENIOR DEV UPDATE: Image Styling --- */
-  .product-img-thumb {
-    width: 50px;
-    height: 50px;
-    object-fit: cover;
-    border-radius: 4px;
-    border: 1px solid #ddd;
-    background-color: #fff;
-  }
-
-  /* Vertically align table content */
-  #myOrder td {
-    vertical-align: middle;
   }
 </style>
 
@@ -272,7 +257,6 @@ if (isset($_POST['save_order']) || isset($_POST['hold_order'])) {
           <table class="table table-bordered" id="myOrder">
             <thead>
               <tr style="background:#f4f4f4;">
-                <th>Image</th>
                 <th>Code</th>
                 <th>Produit</th>
                 <th>Stock</th>
@@ -289,29 +273,21 @@ if (isset($_POST['save_order']) || isset($_POST['hold_order'])) {
               if ($edit_mode && !empty($existing_items)) {
                 foreach ($existing_items as $item) {
                   $remise_percent = ($item['qty'] > 0 && $item['price'] > 0) ? round(($item['remise'] / ($item['price'] * $item['qty'])) * 100) : 0;
-
-                  // SENIOR DEV UPDATE: Determine Image URL
-                  $img_src = !empty($item['img']) ? "upload/" . $item['img'] : 'dist/img/no-image.png';
-
                   echo '<tr>
-                        <input type="hidden" class="productid" name="productid[]" value="' . $item['product_id'] . '">
-                        <input type="hidden" class="productstock" name="productstock[]" value="' . $item['current_stock'] . '">
-                        <input type="hidden" class="minstock" name="minstock[]" value="' . $item['min_stock'] . '">
-                        <input type="hidden" class="productmin" name="productmin[]" value="' . $item['min_price'] . '">
-                        <input type="hidden" class="productsatuan" name="productsatuan[]" value="' . $item['product_satuan'] . '">
-                        <input type="hidden" class="productremise" name="productremise[]" value="' . $item['remise'] . '"> 
-                        
-                        <td class="text-center"><img src="' . $img_src . '" class="product-img-thumb" alt="Img"></td>
-
-                        <td><input type="text" class="form-control" name="productcode[]" value="' . $item['product_code'] . '" readonly></td>
-                        <td><input type="text" class="form-control" name="productname[]" value="' . $item['product_name'] . '" readonly></td>
-                        <td><span class="badge badge-info">' . $item['current_stock'] . '</span></td>
-                        <td><input type="number" class="form-control productprice" name="productprice[]" value="' . $item['price'] . '"></td>
-                        <td><input type="number" class="form-control discount" name="discount[]" value="' . $remise_percent . '"></td>
-                        <td><input type="number" class="form-control quantity_product" name="quantity[]" value="' . $item['qty'] . '"></td>
-                        <td><input type="text" class="form-control producttotal" name="producttotal[]" value="' . $item['total'] . '" readonly></td>
-                        <td><button type="button" class="btn btn-danger btn-sm btn-remove"><i class="fa fa-times"></i></button></td>
-                      </tr>';
+                                        <input type="hidden" class="productid" name="productid[]" value="' . $item['product_id'] . '">
+                                        <input type="hidden" class="productstock" name="productstock[]" value="' . $item['current_stock'] . '">
+                                        <input type="hidden" class="minstock" name="minstock[]" value="' . $item['min_stock'] . '">
+                                        <input type="hidden" class="productmin" name="productmin[]" value="' . $item['min_price'] . '">
+                                        <input type="hidden" class="productsatuan" name="productsatuan[]" value="' . $item['product_satuan'] . '">
+                                        <input type="hidden" class="productremise" name="productremise[]" value="' . $item['remise'] . '"> <td><input type="text" class="form-control" name="productcode[]" value="' . $item['product_code'] . '" readonly></td>
+                                        <td><input type="text" class="form-control" name="productname[]" value="' . $item['product_name'] . '" readonly></td>
+                                        <td><span class="badge badge-info">' . $item['current_stock'] . '</span></td>
+                                        <td><input type="number" class="form-control productprice" name="productprice[]" value="' . $item['price'] . '"></td>
+                                        <td><input type="number" class="form-control discount" name="discount[]" value="' . $remise_percent . '"></td>
+                                        <td><input type="number" class="form-control quantity_product" name="quantity[]" value="' . $item['qty'] . '"></td>
+                                        <td><input type="text" class="form-control producttotal" name="producttotal[]" value="' . $item['total'] . '" readonly></td>
+                                        <td><button type="button" class="btn btn-danger btn-sm btn-remove"><i class="fa fa-times"></i></button></td>
+                                    </tr>';
                 }
               }
               ?>
@@ -429,10 +405,6 @@ if (isset($_POST['save_order']) || isset($_POST['hold_order'])) {
       });
 
       if (!exists) {
-        // SENIOR DEV UPDATE: JS Image Handling
-        // Note: ensure 'img' is selected in get_product_by_code.php
-        let imgSrc = (data.img && data.img !== "") ? data.img : 'dist/img/no-image.png';
-
         let html = `<tr>
                 <input type="hidden" class="productid" name="productid[]" value="${data.product_id}">
                 <input type="hidden" class="productstock" name="productstock[]" value="${data.stock}">
@@ -441,8 +413,6 @@ if (isset($_POST['save_order']) || isset($_POST['hold_order'])) {
                 <input type="hidden" class="productsatuan" name="productsatuan[]" value="${data.product_satuan}">
                 <input type="hidden" class="productremise" name="productremise[]" value="0">
                 
-                <td class="text-center"><img src="upload/${imgSrc}" class="product-img-thumb" alt="Img"></td>
-
                 <td><input type="text" class="form-control" name="productcode[]" value="${data.product_code}" readonly></td>
                 <td><input type="text" class="form-control" name="productname[]" value="${data.product_name}" readonly></td>
                 <td><span class="badge badge-info">${data.stock}</span></td>
