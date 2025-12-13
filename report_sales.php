@@ -23,12 +23,14 @@ $is_admin = ($_SESSION['role'] ?? '') == "Admin" || ($_SESSION['role'] ?? '') ==
 $date_1 = $_POST['date_1'] ?? date('Y-m-01');
 $date_2 = $_POST['date_2'] ?? date('Y-m-d');
 $leshop = $_POST['shop'] ?? 'all';
+$status = "saved";
 
 // --- LOGIQUE DE FILTRAGE PHP ---
-$query_where_clause = " WHERE order_date BETWEEN :fromdate AND :todate ";
+$query_where_clause = " WHERE status=:status AND order_date BETWEEN :fromdate AND :todate ";
 $query_params = [
   ':fromdate' => $date_1,
-  ':todate' => $date_2
+  ':todate' => $date_2,
+  ':status' => $status
 ];
 
 if ($is_admin) {

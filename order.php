@@ -318,13 +318,32 @@ include("include/stat_op_caisse.php");
     }
 
     function openDesktopReceiptWindow(invoiceId) {
-        var url = 'misc/nota.php?id=' + invoiceId;
+        // 1. Ouvrir une fenêtre pour la page 'nota.php' avec l'ID de la facture ET le paramètre 'output=view'
+        var url = 'misc/nota.php?id=' + invoiceId + '&output=view'; // Ajout de &output=view
         var windowName = 'ReceiptPrint' + invoiceId;
         var features = 'width=400,height=600,scrollbars=yes,resizable=yes,location=no,menubar=no,toolbar=no,status=no';
         var newWindow = window.open(url, windowName, features);
+
+        // 2. Tenter d'imprimer dès que la fenêtre de reçu est chargée
         newWindow.onload = function() {
-            newWindow.print();
+            // Le contenu du PDF devrait s'afficher directement dans la fenêtre du navigateur,
+            // déclenchant ainsi la boîte de dialogue d'impression native du navigateur
+            // pour le PDF (d'où l'Output('I') dans nota.php).
+            // window.print() peut ne pas être nécessaire ou fonctionner différemment pour les PDF.
+            // Si le navigateur ne déclenche pas l'impression pour le PDF, on peut le laisser:
+            // newWindow.print(); 
         };
+
+        // 3. (Optionnel) Ajoutons une redirection silencieuse pour simuler l'action "après impression"
+        // comme dans votre premier exemple de code.
+        // Cette étape est souvent difficile à gérer de manière fiable avec les popups PDF.
+        // L'implémentation ci-dessous n'est qu'un exemple.
+        setTimeout(function() {
+            // Rediriger ou fermer la fenêtre après un délai, pour nettoyer
+            // newWindow.close(); // Si vous voulez fermer après impression
+            // Ou
+            // newWindow.location.href = 'misc/nota.php?id=' + invoiceId + '&output=silent';
+        }, 1000); // 1 seconde d'attente
     }
 </script>
 
