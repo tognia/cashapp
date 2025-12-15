@@ -1,7 +1,7 @@
 <?php
 
 try {
-    $pdo = new PDO('mysql:host=localhost;dbname=cashapp', 'root', '');
+    $pdo = new PDO('mysql:host=localhost;dbname=cashapp', 'peace', 'Eyezonkamer1&@');
     //echo 'Connection Successfull';
 } catch (PDOException $error) {
     echo $error->getmessage();
