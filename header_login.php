@@ -37,9 +37,7 @@
 <body class="u-body">
   <header class="u-align-center-sm u-align-center-xs u-clearfix u-header u-header" id="sec-ce98">
     <div class="u-clearfix u-sheet u-sheet-1">
-      <a href="dashboard.php" class="u-image u-logo u-image-1" data-image-width="209" data-image-height="228">
-        <img src="images/logo_nk.png" class="u-logo-image u-logo-image-1" data-image-width="63">
-      </a>
+      <img src="images/logo_nk.png" class="u-logo-image u-logo-image-1" data-image-width="63">
       <nav class="u-align-left u-menu u-menu-dropdown u-offcanvas u-menu-1" data-responsive-from="MD">
         <div class="menu-collapse" style="font-size: 1rem;">
           <a class="u-button-style u-nav-link" href="#" style="font-size: calc(1em + 6px);">

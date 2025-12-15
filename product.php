@@ -1,4 +1,5 @@
 <?php
+//product.php
 include_once 'db/connect_db.php';
 
 // --- Session and Access Control ---
@@ -6,7 +7,8 @@ if (empty($_SESSION['user_name'])) {
     header('location:index.php');
     exit();
 } else {
-    if ($_SESSION['role'] == "Admin") {
+    // Determine header based on role
+    if ($_SESSION['role'] == "Admin" || $_SESSION['role'] == "Responsable" || $_SESSION['role'] == "storekeeper") {
         include_once 'inc/header_all.php';
     } else {
         include_once 'inc/header_all_operator.php';
@@ -17,6 +19,7 @@ if (empty($_SESSION['user_name'])) {
 error_reporting(0);
 
 // --- Product Deletion Logic (IMPROVED: Use Prepared Statements) ---
+// ... (Your existing deletion logic remains unchanged) ...
 $id = $_GET['id'] ?? null;
 $code_to_delete = $_GET['code'] ?? null;
 
@@ -57,12 +60,118 @@ if ($id && $code_to_delete) {
     }
 }
 
+// --- NEW LOGIC: Mass Stock Update (Transaction) ---
+if (isset($_POST['mass_update_stock'])) {
+    $updates = $_POST['updates'] ?? [];
+    $receipt_date = $_POST['mass_receipt_date'] ?? date('Y-m-d');
+    $default_supplier = $_POST['mass_supplier_name'] ?? 'Non spécifié';
+    $current_user_id = $_SESSION['user_id'] ?? null;
+    $success_count = 0;
+    $error_occurred = false;
+
+    if (!$current_user_id) {
+        $error_occurred = true;
+        $global_message = "Erreur: Identifiant utilisateur non disponible. Opération annulée.";
+    } elseif (empty($updates)) {
+        $error_occurred = true;
+        $global_message = "Aucun produit à mettre à jour n'a été trouvé.";
+    } else {
+        try {
+            $pdo->beginTransaction();
+
+            $update_product_stmt = $pdo->prepare("UPDATE tbl_product SET stock = stock + :quantity WHERE product_id = :id");
+            $insert_receipt_stmt = $pdo->prepare("
+                INSERT INTO tbl_product_receipt (
+                    receipt_date, product_id, received_quantity, supplier_name, 
+                    receipt_price, user_id, product_code, product_sku, product_name
+                )
+                VALUES (
+                    :date, :product_id, :quantity, :supplier, 
+                    :price, :user_id, :product_code, :product_sku, :product_name
+                )
+            ");
+
+            foreach ($updates as $update) {
+                $id = filter_var($update['product_id'] ?? null, FILTER_SANITIZE_NUMBER_INT);
+                $quantity = filter_var($update['quantity'] ?? null, FILTER_SANITIZE_NUMBER_INT);
+                $price = filter_var($update['price'] ?? 0, FILTER_SANITIZE_NUMBER_FLOAT, FILTER_FLAG_ALLOW_FRACTION);
+                $supplier = filter_var($update['supplier'] ?? $default_supplier, FILTER_SANITIZE_STRING);
+
+                if ($id && is_numeric($quantity) && $quantity > 0) {
+
+                    // 1. Récupérer les données actuelles pour l'historique
+                    $select_product = $pdo->prepare("SELECT product_code, product_sku, product_name FROM tbl_product WHERE product_id = :id");
+                    $select_product->bindParam(':id', $id, PDO::PARAM_INT);
+                    $select_product->execute();
+                    $product_info = $select_product->fetch(PDO::FETCH_ASSOC);
+
+                    if ($product_info) {
+                        // 2. Mise à jour du stock
+                        $update_product_stmt->bindParam(':quantity', $quantity, PDO::PARAM_INT);
+                        $update_product_stmt->bindParam(':id', $id, PDO::PARAM_INT);
+                        $update_product_stmt->execute();
+
+                        // 3. Insertion de la réception
+                        $insert_receipt_stmt->bindParam(':date', $receipt_date);
+                        $insert_receipt_stmt->bindParam(':product_id', $id, PDO::PARAM_INT);
+                        $insert_receipt_stmt->bindParam(':quantity', $quantity, PDO::PARAM_INT);
+                        $insert_receipt_stmt->bindParam(':supplier', $supplier);
+                        $insert_receipt_stmt->bindParam(':price', $price);
+                        $insert_receipt_stmt->bindParam(':user_id', $current_user_id, PDO::PARAM_INT);
+                        $insert_receipt_stmt->bindParam(':product_code', $product_info['product_code']);
+                        $insert_receipt_stmt->bindParam(':product_sku', $product_info['product_sku']);
+                        $insert_receipt_stmt->bindParam(':product_name', $product_info['product_name']);
+                        $insert_receipt_stmt->execute();
+
+                        $success_count++;
+                    } else {
+                        // Product ID not found, but continue with others
+                        error_log("Mass Stock Update: Product ID $id not found.");
+                    }
+                }
+            }
+
+            if ($success_count > 0) {
+                $pdo->commit();
+                $global_message = "$success_count produit(s) mis à jour avec succès.";
+                $global_alert_type = "success";
+            } else {
+                $pdo->rollBack();
+                $global_message = "Aucun produit valide trouvé pour la mise à jour du stock. Transaction annulée.";
+                $global_alert_type = "warning";
+            }
+        } catch (Exception $e) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            error_log("Mass Stock Update Error: " . $e->getMessage());
+            $global_message = "Erreur fatale de base de données. L'opération a été annulée.";
+            $global_alert_type = "error";
+            $error_occurred = true;
+        }
+
+        // Display SweetAlert for mass update result
+        if (isset($global_message)) {
+            echo '<script type="text/javascript">
+                    jQuery(function validation(){
+                    swal("' . ucfirst($global_alert_type) . '", "' . $global_message . '", "' . $global_alert_type . '", {
+                    button: "Continue",
+                        }).then(() => {
+                            window.location.href = "product.php";
+                        });
+                    });
+                    </script>';
+        }
+    }
+}
+
 // --- Product Listing Query Logic ---
 $status = $_GET['status'] ?? 'all';
 $statusName = "";
 $select_query = "";
 
 switch ($status) {
+    // ... (Your existing status query logic remains unchanged) ...
     case 'ok':
         $select_query = "SELECT * FROM tbl_product WHERE stock > min_stock ORDER BY product_id DESC";
         $statusName = " en stock";
@@ -85,8 +194,8 @@ switch ($status) {
 $select = $pdo->prepare($select_query);
 
 // --- New Product Insertion Logic (From Modal Submission) ---
+// ... (Your existing product insertion logic remains unchanged) ...
 if (isset($_POST['add_product'])) {
-
     // 1. Sanitize/Extract Data
     $code = str_replace(' ', '', $_POST['product_code']);
     $sku = str_replace(' ', '', $_POST['product_sku']);
@@ -286,12 +395,13 @@ if (isset($_POST['add_product'])) {
             <div class="box-header with-border">
                 <h3 class="box-title">Liste Produits <?php echo $statusName; ?></h3>
 
-                <button type="button" class="btn btn-success btn-sm pull-right" data-toggle="modal" data-target="#addNewProductModal" title="Créer un Nouveau Produit">
+                <button type="button" class="btn btn-info btn-sm pull-right" data-toggle="modal" data-target="#massStockModal" style="margin-right: 10px;" title="Ajouter du stock en masse">
+                    <i class="fa fa-upload"></i> Ajouter Stock (En Masse)
+                </button>
+
+                <button type="button" class="btn btn-success btn-sm pull-right" data-toggle="modal" data-target="#addNewProductModal" title="Créer un Nouveau Produit" style="margin-right: 10px;">
                     <i class="fa fa-plus"></i> Nouveau Produit
                 </button>
-                <a href="add_stock_many_products.php" class="btn btn-info btn-sm pull-right" style="margin-right: 10px;" title="Ajouter du stock en masse par code-barre">
-                    <i class="fa fa-barcode"></i> Ajouter Stock (Lecteur)
-                </a>
             </div>
 
             <div class="box-body">
@@ -348,7 +458,7 @@ if (isset($_POST['add_product'])) {
                                                 <i class="fa fa-trash"></i>
                                             </button>
                                             <a href="edit_product.php?id=<?php echo $row->product_id; ?>" class="btn btn-info btn-sm" title="Modifier Produit"><i class="fa fa-pencil"></i></a>
-                                            <a href="edit_stock.php?id=<?php echo $row->product_id; ?>" class="btn btn-success btn-sm" title="Ajouter Stock"><i class="fa fa-plus"></i></a>
+                                            <a href="edit_stock.php?id=<?php echo $row->product_id; ?>" class="btn btn-success btn-sm" title="Ajouter Stock (Individuel)"><i class="fa fa-plus"></i></a>
                                         <?php } ?>
                                         <a href="view_product.php?id=<?php echo $row->product_id; ?>" class="btn btn-default btn-sm" title="Voir Détails"><i class="fa fa-eye"></i></a>
                                     </td>
@@ -363,6 +473,7 @@ if (isset($_POST['add_product'])) {
         </div>
     </section>
 </div>
+
 <div class="modal fade" id="addNewProductModal" tabindex="-1" role="dialog" aria-labelledby="addNewProductModalLabel">
     <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">
@@ -491,6 +602,87 @@ if (isset($_POST['add_product'])) {
         </div>
     </div>
 </div>
+
+<div class="modal fade" id="massStockModal" tabindex="-1" role="dialog" aria-labelledby="massStockModalLabel">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-info">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                <h4 class="modal-title" id="massStockModalLabel"><i class="fa fa-cubes"></i> Ajout de Stock en Masse</h4>
+            </div>
+            <form action="product.php" method="POST" name="form_mass_stock" onsubmit="return confirmMassAddition();" autocomplete="off">
+                <div class="modal-body">
+                    <div class="row" style="margin-bottom: 20px; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="mass_receipt_date">Date de Réception Globale <span class="text-danger">*</span></label>
+                                <input type="date" class="form-control" name="mass_receipt_date" id="mass_receipt_date" required value="<?php echo date('Y-m-d'); ?>">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="mass_supplier_name">Fournisseur (Par défaut si non spécifié par ligne)</label>
+                                <select class="form-control" name="mass_supplier_name" id="mass_supplier_name" style="width: 100%;">
+                                    <option value="">-- Aucun / Non spécifié --</option>
+                                    <?php
+                                    $select_sup_mass = $pdo->prepare("SELECT suplier_name FROM supliers ORDER BY suplier_name ASC");
+                                    $select_sup_mass->execute();
+                                    while ($row_sup_mass = $select_sup_mass->fetch(PDO::FETCH_ASSOC)) {
+                                        echo '<option>' . htmlspecialchars($row_sup_mass['suplier_name']) . '</option>';
+                                    }
+                                    ?>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-xs-12">
+                            <div class="form-group">
+                                <label for="product_code_input">Saisir/Scanner Code Produit</label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="product_code_input" placeholder="Entrez le code produit ou SKU">
+                                    <span class="input-group-btn">
+                                        <button class="btn btn-primary" type="button" id="add_product_line_btn"><i class="fa fa-search"></i> Ajouter Ligne</button>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-striped" id="mass_stock_table">
+                            <thead>
+                                <tr class="bg-primary">
+                                    <th style="width: 5%;">#</th>
+                                    <th style="width: 25%;">Produit (Code)</th>
+                                    <th style="width: 15%;">Stock Actuel</th>
+                                    <th style="width: 15%;">Quantité Reçue <span class="text-danger">*</span></th>
+                                    <th style="width: 20%;">Prix Achat Unitaire</th>
+                                    <th style="width: 15%;">Fournisseur</th>
+                                    <th style="width: 5%;">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="stock_lines_container">
+                                <tr id="no-item-row">
+                                    <td colspan="7" class="text-center text-muted">Utilisez le champ ci-dessus pour ajouter des produits par code.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Fermer</button>
+                    <button type="submit" class="btn btn-info" name="mass_update_stock" id="submit_mass_stock" disabled>
+                        <i class="fa fa-check-circle"></i> Enregistrer Toutes les Réceptions
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <script>
     // Image Preview Function (Updated to use modal ID)
     function readURL(input) {
@@ -516,6 +708,29 @@ if (isset($_POST['add_product'])) {
 
         // Open the window
         window.open(url, windowName, features);
+    }
+
+    // NEW FUNCTION: Check if mass stock table has items
+    function checkMassStockTable() {
+        const rowCount = $('#stock_lines_container tr').not('#no-item-row').length;
+        $('#submit_mass_stock').prop('disabled', rowCount === 0);
+        $('#no-item-row').toggle(rowCount === 0);
+    }
+
+    /**
+     * Confirme la mise à jour de stock en masse avant la soumission.
+     * @returns {boolean} True si l'utilisateur confirme, false sinon.
+     */
+    function confirmMassAddition() {
+        const rowCount = $('#stock_lines_container tr').not('#no-item-row').length;
+        if (rowCount === 0) {
+            swal("Attention", "Veuillez ajouter au moins un produit pour la mise à jour.", "warning");
+            return false;
+        }
+
+        const confirmationMessage = `Êtes-vous sûr de vouloir enregistrer les réceptions pour **${rowCount}** produit(s) et mettre à jour le stock principal?`;
+
+        return confirm(confirmationMessage);
     }
 
     $(document).ready(function() {
@@ -549,14 +764,130 @@ if (isset($_POST['add_product'])) {
                 });
         });
 
-        // Clear modal content/form on close
+        // Clear modal content/form on close (for new product modal)
         $('#addNewProductModal').on('hidden.bs.modal', function() {
             $(this).find('form').trigger('reset'); // Reset form
             $('#modal_img_preview').attr('src', 'upload/default.png').width(150).height('auto'); // Reset image preview
+        });
+
+        // Clear modal content/form on close (for mass stock modal)
+        $('#massStockModal').on('hidden.bs.modal', function() {
+            $('#stock_lines_container').empty().html('<tr id="no-item-row"><td colspan="7" class="text-center text-muted">Utilisez le champ ci-dessus pour ajouter des produits par code.</td></tr>'); // Clear dynamic rows
+            $(this).find('form').trigger('reset'); // Reset form elements outside the table
+            $('#mass_receipt_date').val('<?php echo date('Y-m-d'); ?>'); // Reset date
+            checkMassStockTable();
+        });
+
+        // --- Mass Stock Modal Logic ---
+
+        // Dynamic Row Counter
+        let line_counter = 0;
+        const suppliers_options = $('#mass_supplier_name').html(); // Reuse the supplier options
+
+        $('#add_product_line_btn').on('click', function() {
+            const product_code = $('#product_code_input').val().trim();
+
+            if (product_code === '') {
+                swal("Attention", "Veuillez entrer un code produit ou SKU.", "warning");
+                return;
+            }
+
+            // Check if product already exists in the list
+            if ($(`#code_input_${product_code.replace(/[^a-zA-Z0-9]/g, '')}`).length > 0) {
+                swal("Attention", `Le produit avec le code ${product_code} est déjà dans la liste.`, "warning");
+                $('#product_code_input').val('');
+                return;
+            }
+
+            // AJAX to fetch product data
+            $.ajax({
+                url: 'fetch_product_data.php', // This is a NEW file you need to create
+                method: 'GET',
+                dataType: 'json',
+                data: {
+                    code: product_code
+                },
+                beforeSend: function() {
+                    $('#add_product_line_btn').prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Recherche...');
+                },
+                success: function(response) {
+                    if (response.status === 'success') {
+                        line_counter++;
+                        const data = response.data;
+                        const unique_id_part = data.product_code.replace(/[^a-zA-Z0-9]/g, '');
+
+                        // Create the new table row
+                        const newRow = `
+                            <tr id="row_${unique_id_part}">
+                                <td>${line_counter}</td>
+                                <td>
+                                    ${data.product_name} (${data.product_code})
+                                    <input type="hidden" name="updates[${line_counter}][product_id]" value="${data.product_id}" />
+                                    <input type="hidden" id="code_input_${unique_id_part}" value="${data.product_code}" />
+                                </td>
+                                <td>
+                                    <span class="label label-primary">${data.stock} ${data.product_satuan}</span>
+                                </td>
+                                <td>
+                                    <input type="number" min="1" step="1" class="form-control" 
+                                        name="updates[${line_counter}][quantity]" required placeholder="Qté" 
+                                        style="max-width: 100px;" value="1" />
+                                </td>
+                                <td>
+                                    <input type="number" step="0.01" min="0" class="form-control" 
+                                        name="updates[${line_counter}][price]" required 
+                                        placeholder="${data.purchase_price}" value="${data.purchase_price}" />
+                                </td>
+                                <td>
+                                    <select class="form-control" name="updates[${line_counter}][supplier]">
+                                        ${suppliers_options.replace(new RegExp('value=""'), 'value="" selected')}
+                                    </select>
+                                </td>
+                                <td>
+                                    <button type="button" class="btn btn-danger btn-xs remove-line" data-unique-id="${unique_id_part}">
+                                        <i class="fa fa-times"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        `;
+
+                        $('#stock_lines_container').append(newRow);
+                        $('#product_code_input').val(''); // Clear input
+                        checkMassStockTable();
+
+                        // Select the supplier that matches the product's default supplier
+                        $(`#row_${unique_id_part} select[name="updates[${line_counter}][supplier]"]`).val(data.supplier);
+
+
+                    } else {
+                        swal("Erreur", response.message, "error");
+                    }
+                },
+                error: function() {
+                    swal("Erreur", "Problème de communication avec le serveur.", "error");
+                },
+                complete: function() {
+                    $('#add_product_line_btn').prop('disabled', false).html('<i class="fa fa-search"></i> Ajouter Ligne');
+                }
+            });
+        });
+
+        // Remove Line Button Handler
+        $('#stock_lines_container').on('click', '.remove-line', function() {
+            const uniqueId = $(this).data('unique-id');
+            $(`#row_${unique_id}`).remove();
+            checkMassStockTable();
+            // Re-index visually if desired, but array index is fine for PHP
         });
     });
 </script>
 
 <?php
+// Retrieve supplier list for the new modal (already done above, but kept here for clarity if moving blocks)
+$select_sup = $pdo->prepare("SELECT suplier_name FROM supliers");
+$select_sup->execute();
+$suppliers_list = $select_sup->fetchAll(PDO::FETCH_COLUMN);
+// The list is used in the modal HTML
+
 include_once 'inc/footer_all.php';
 ?>

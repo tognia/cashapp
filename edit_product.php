@@ -132,8 +132,7 @@ if (isset($_POST['update_product'])) {
                                     echo "War1";
                                 }
                             }
-                         
-                            } else {
+                        } else {
                             echo '<script type="text/javascript">
                                         jQuery(function validation(){
                                         swal("Error", "Erreur En registrement", "error", {
@@ -225,7 +224,7 @@ if (isset($_POST['update_product'])) {
                 }
             }
             // echo "ZONE";
-            header('location:view_product.php?id='.urlencode($id));
+            header('location:view_product.php?id=' . urlencode($id));
         } else {
             echo '<script type="text/javascript">
                         jQuery(function validation(){
@@ -302,15 +301,15 @@ include_once 'inc/header_all.php';
                         </div>
                         <div class="form-group">
                             <label for="">Prix Achat</label>
-                            <input type="number" min="10" class="form-control" name="purchase_price" value="<?php echo $purchase_db; ?>" required>
+                            <input type="number" class="form-control" name="purchase_price" value="<?php echo $purchase_db; ?>" required>
                         </div>
                         <div class="form-group">
                             <label for="">Prix de vente</label>
-                            <input type="number" min="100" class="form-control" name="sell_price" value="<?php echo $sell_db; ?>" required>
+                            <input type="number" class="form-control" name="sell_price" value="<?php echo $sell_db; ?>" required>
                         </div>
                         <div class="form-group">
                             <label for="">Prix Min</label>
-                            <input type="number" min="100" class="form-control" name="min_price" value="<?php echo $min_db; ?>" required>
+                            <input type="number" class="form-control" name="min_price" value="<?php echo $min_db; ?>" required>
                         </div>
                         <div class="form-group">
                             <label for="">Discount</label>

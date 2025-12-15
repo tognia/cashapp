@@ -1,4 +1,5 @@
 <?php
+//edit_stock_shop.php
 // PHP Code: Traitement du Transfert de Stock Entrepôt vers Boutique
 
 // 1. Better error handling and session check

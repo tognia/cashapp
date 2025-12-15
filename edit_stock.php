@@ -1,5 +1,5 @@
 <?php
-
+//edit_stock.php
 include_once 'misc/plugin.php';
 include_once 'db/connect_db.php';
 
