@@ -234,6 +234,8 @@ $product_details = $req_details->fetchAll(PDO::FETCH_ASSOC);
         <img src="./images/logo_nk.png" alt="Logo" style="display: block; margin: 0 auto; max-width: 100px;">
         <h4>Recu de Vente</h4>
         <p style="text-align: center; border-top: 1px dashed #000; padding-top: 5px;">
+            Tél. +237 673 23 69 29 (SCTE NGNO-KWE SERVICES SARL)<br>
+            Yaounde - CMR<br>
             Date: <?php echo date("d-m-Y H:i:s", strtotime($invoice_data['order_date'] . ' ' . $invoice_data['time_order'])); ?><br>
             Facture N°: <?php echo $invoice_id; ?><br>
             Opérateur: <?php echo clean_special_chars($invoice_data['cashier_name']); ?>

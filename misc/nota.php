@@ -71,7 +71,7 @@ $pdf->Cell(60, 5, iconv('UTF-8', 'ASCII//TRANSLIT', 'Recu de Vente'), 0, 1, 'C')
 $pdf->SetFont('Arial', '', 6);
 $pdf->Cell(60, 3, 'Yaounde - CMR', 0, 1, 'C');
 $pdf->Cell(60, 3, 'Epicerie', 0, 1, 'C');
-$pdf->Cell(60, 3, 'Tel. 00237 621 10 05 00 (SCTE NGNO-KWE SERVICES SARL)', 0, 1, 'C');
+$pdf->Cell(60, 3, 'Tel. +237 673 23 69 29 (SCTE NGNO-KWE SERVICES SARL)', 0, 1, 'C');
 
 // Ligne de séparation
 $pdf->Line(10, $pdf->GetY() + 1, 70, $pdf->GetY() + 1);
