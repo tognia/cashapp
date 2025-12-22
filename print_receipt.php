@@ -1,11 +1,10 @@
 <?php
-// Inclure le fichier de connexion et de sécurité
+//print_receipt.php
 include_once 'db/connect_db.php';
 
-// --- FONCTION POUR LE CONTRÔLE DES CARACTÈRES SPÉCIAUX (é -> e, ç -> c) ---
+// --- FONCTION POUR LE CONTRÔLE DES CARACTÈRES SPÉCIAUX ---
 function clean_special_chars($text)
 {
-    // Liste des remplacements pour les accents courants
     $unwanted_array = [
         'à' => 'a',
         'á' => 'a',
@@ -60,40 +59,34 @@ function clean_special_chars($text)
         'Ý' => 'Y'
     ];
     $text = strtr($text, $unwanted_array);
-
-    // Assurez l'encodage HTML après le remplacement
     return htmlspecialchars($text);
 }
-// --------------------------------------------------------------------------
 
 // Vérification de la session utilisateur
 if (!isset($_SESSION['user_name']) || $_SESSION['user_name'] == "") {
-    // Redirection si non connecté
     header('location: index.php');
     exit();
 }
 
-// Récupérer l'ID de la facture de l'URL
 $invoice_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
 
 if ($invoice_id == 0) {
-    // Gérer l'absence d'ID
-    echo '<script>swal("Erreur", "ID de facture non spécifié.", "error");</script>';
+    echo '<script>alert("ID de facture non spécifié."); window.close();</script>';
     exit();
 }
 
-// 1. Récupérer les détails de la facture (tbl_invoice)
+// 1. Récupérer les détails de la facture
 $req_invoice = $pdo->prepare("SELECT * FROM tbl_invoice WHERE invoice_id = :id");
 $req_invoice->bindParam(':id', $invoice_id);
 $req_invoice->execute();
 $invoice_data = $req_invoice->fetch(PDO::FETCH_ASSOC);
 
 if (!$invoice_data) {
-    echo '<script>swal("Erreur", "Facture introuvable.", "error");</script>';
+    echo '<script>alert("Facture introuvable."); window.close();</script>';
     exit();
 }
 
-// 2. Récupérer les détails des produits (tbl_invoice_detail)
+// 2. Récupérer les détails des produits
 $req_details = $pdo->prepare("SELECT * FROM tbl_invoice_detail WHERE invoice_id = :id");
 $req_details->bindParam(':id', $invoice_id);
 $req_details->execute();
@@ -107,17 +100,10 @@ $product_details = $req_details->fetchAll(PDO::FETCH_ASSOC);
     <meta charset="UTF-8">
     <title>Impression Recu Facture #<?php echo $invoice_id; ?></title>
     <style>
-        /* CSS pour le reçu */
-
-        /* AJOUT POUR SUPPRIMER LES EN-TÊTES/PIEDS DE PAGE DU NAVIGATEUR (URL, date, etc.) */
         @page {
             size: auto;
-            /* Laisser le navigateur décider ou utiliser auto */
             margin: 0;
-            /* Supprime toutes les marges y compris les espaces pour les en-têtes/pieds de page */
         }
-
-        /* Fin de l'ajout */
 
         body {
             font-family: 'Arial', sans-serif;
@@ -151,11 +137,9 @@ $product_details = $req_details->fetchAll(PDO::FETCH_ASSOC);
             margin-top: 10px;
         }
 
-        /* Réduire l'espace après le tableau des totaux */
         .receipt .totals {
             margin-bottom: 5px;
         }
-
 
         .receipt th,
         .receipt td {
@@ -164,12 +148,10 @@ $product_details = $req_details->fetchAll(PDO::FETCH_ASSOC);
             text-align: left;
         }
 
-        /* En-têtes de colonnes */
         .receipt thead th {
             font-size: 14px;
         }
 
-        /* Lignes de détails des produits (TAILLE AUGMENTÉE) */
         .receipt .item-details tbody td {
             font-size: 14px;
             font-weight: normal;
@@ -179,17 +161,11 @@ $product_details = $req_details->fetchAll(PDO::FETCH_ASSOC);
             text-align: center;
         }
 
-        /* Qty */
         .receipt .item-details td:nth-child(3) {
             text-align: right;
+            border-right: 1px dotted #ccc;
         }
 
-        /* Price */
-        .receipt .item-details td:nth-child(4) {
-            text-align: right;
-        }
-
-        /* Total */
         .receipt .item-details td:nth-child(4) {
             text-align: right;
         }
@@ -205,17 +181,14 @@ $product_details = $req_details->fetchAll(PDO::FETCH_ASSOC);
             font-weight: bold;
         }
 
-        /* TOTAL TTC (Taille 16px en Gras) */
         .receipt .totals tr[style*="font-size: 16px;"] td {
             font-size: 16px !important;
         }
 
-        /* La taille du message de remerciement reste 14px */
         .receipt p[style*="padding-top: 5px"] {
             font-size: 14px;
         }
 
-        /* Masquer les éléments non nécessaires à l'impression */
         @media print {
             body {
                 margin: 0;
@@ -234,7 +207,9 @@ $product_details = $req_details->fetchAll(PDO::FETCH_ASSOC);
         <img src="./images/logo_nk.png" alt="Logo" style="display: block; margin: 0 auto; max-width: 100px;">
         <h4>Recu de Vente</h4>
         <p style="text-align: center; border-top: 1px dashed #000; padding-top: 5px;">
-            Tél. +237 673 23 69 29 (SCTE NGNO-KWE SERVICES SARL)<br>
+            SCTE NGNO-KWE SERVICES SARL<br>
+            RC/YAE/2023/B/41 - NIU : M012317891666Q <br>
+            Tél. +237 673 23 69 29 <br>
             Yaounde - CMR<br>
             Date: <?php echo date("d-m-Y H:i:s", strtotime($invoice_data['order_date'] . ' ' . $invoice_data['time_order'])); ?><br>
             Facture N°: <?php echo $invoice_id; ?><br>
@@ -245,9 +220,9 @@ $product_details = $req_details->fetchAll(PDO::FETCH_ASSOC);
             <thead>
                 <tr>
                     <th style="width: 50%;">Produit</th>
-                    <th style="width: 15%; text-align: center;">Qte</th>
+                    <th style="width: 10%; text-align: center;">Qte</th>
                     <th style="width: 20%; text-align: right;">Prix</th>
-                    <th style="width: 15%; text-align: right;">Total</th>
+                    <th style="width: 20%; text-align: right;">Total</th>
                 </tr>
             </thead>
             <tbody>
@@ -296,11 +271,18 @@ $product_details = $req_details->fetchAll(PDO::FETCH_ASSOC);
 
     <script>
         window.onload = function() {
-            // Déclencher la boîte de dialogue d'impression
+
+            setTimeout(function() {
+                window.close();
+            }, 100);
+            // Ouvre la boîte de dialogue d'impression
             window.print();
 
-            // Après l'impression, rediriger vers la page des commandes (ou fermer la fenêtre)
-            // Utiliser setTimeout pour s'assurer que l'impression a le temps d'être lancée
+            // Une fois que l'utilisateur a cliqué sur "Imprimer" ou "Annuler",
+            // on ferme simplement cette fenêtre popup pour revenir à l'écran précédent.
+            // Le délai de 100ms assure la compatibilité avec certains navigateurs.
+
+
             setTimeout(function() {
                 window.location.href = 'order.php';
             }, 500);

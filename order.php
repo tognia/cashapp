@@ -16,7 +16,7 @@ if (empty($_SESSION['user_name'])) {
     }
 }
 
-// Désactiver l'affichage des erreurs PHP (déconseillé en production)
+// Désactiver l'affichage des erreurs PHP (déconseillé en production, utile pour la propreté ici)
 error_reporting(0);
 
 // Récupération sécurisée de l'ID pour la suppression
@@ -26,12 +26,12 @@ $id = $_GET['id'] ?? null;
 $today_date = date("Y-m-d");
 $magasin = $_SESSION['magasin'] ?? ''; // Magasin de l'utilisateur actuel
 
-// --- 2 & 3. LOGIQUE D'ANNULATION (SOFT DELETE) ET RETOUR DE STOCK ---
+// --- LOGIQUE D'ANNULATION (SOFT DELETE) ET RETOUR DE STOCK ---
 if ($id) {
     try {
         $pdo->beginTransaction();
 
-        // 1. Récupérer les infos de la facture (pour vérifier le statut et l'utilisateur)
+        // 1. Récupérer les infos de la facture
         $stmt_inv = $pdo->prepare("SELECT user, status, invoice_id FROM tbl_invoice WHERE invoice_id = :id");
         $stmt_inv->execute([':id' => $id]);
         $invoice = $stmt_inv->fetch(PDO::FETCH_ASSOC);
@@ -40,7 +40,6 @@ if ($id) {
         if ($invoice && $invoice['status'] == 'saved') {
 
             // 2. Identifier le magasin d'origine de la commande
-            // On cherche le magasin de l'utilisateur qui a créé la commande
             $stmt_user = $pdo->prepare("SELECT magasin FROM tbl_user WHERE username = :user");
             $stmt_user->execute([':user' => $invoice['user']]);
             $user_data = $stmt_user->fetch(PDO::FETCH_ASSOC);
@@ -93,8 +92,7 @@ if ($id) {
 // Définir les paramètres POST pour l'exportation
 $export_params = http_build_query($_REQUEST);
 
-// --- 4. GESTION DU FILTRE DE STATUT (Visualisation) ---
-// Par défaut on affiche 'saved', sinon on prend la valeur passée en GET
+// --- GESTION DU FILTRE DE STATUT (Visualisation) ---
 $view_status = $_REQUEST['view_status'] ?? 'saved';
 ?>
 
@@ -149,7 +147,6 @@ include("include/stat_op_caisse.php");
             <?php
             // --- LOGIQUE D'ALERTE DE STOCK ---
             if (($_SESSION['count_alert'] ?? 0) > 0 && isset($_POST['save_order'])) {
-                // (Votre code existant d'alerte stock - inchangé)
                 include("include/notif_PDF_email_stock_alert.php");
             }
             ?>
@@ -161,19 +158,18 @@ include("include/stat_op_caisse.php");
                     <thead>
                         <tr>
                             <th style="width:20px;">No</th>
+                            <th style="width:20px;">Num Invoice</th>
                             <th style="width:100px;">Opérateur</th>
-                            <th style="width:100px;">Client</th>
                             <th style="width:100px;">Date</th>
                             <th style="width:100px;">Montant</th>
                             <th style="width:100px;">Tva</th>
                             <th style="width:100px;">Mode Pay.</th>
-                            <th style="width:50px;">Actions</th>
+                            <th style="width:120px;">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php
                         $no = 1;
-                        // ... (Top of order.php remains same until SQL construction) ...
 
                         $sql = "SELECT * FROM tbl_invoice";
                         $conditions = [];
@@ -184,39 +180,35 @@ include("include/stat_op_caisse.php");
                         $params[':status'] = $view_status;
 
                         // --- FILTRES DATE, SHOP & OPERATOR ---
-
-                        // Récupération des inputs
                         $leshop = $_REQUEST['shop'] ?? 'all';
-                        $op_filter = $_REQUEST['operator_filter'] ?? 'all'; // Nouveau
+                        $op_filter = $_REQUEST['operator_filter'] ?? 'all';
                         $date1 = $_REQUEST['date_1'] ?? '';
                         $date2 = $_REQUEST['date_2'] ?? '';
 
-                        // Application du filtre date si demandé
+                        // Filtre Date
                         if (isset($_POST['date_filter']) || (isset($_GET['date_1']) && isset($_GET['date_2']))) {
                             $conditions[] = "order_date BETWEEN :fromdate AND :todate";
                             $params[':fromdate'] = $date1;
                             $params[':todate'] = $date2;
                         }
 
-                        // Logique Magasin
+                        // Filtre Magasin
                         if (($_SESSION['role'] ?? '') == "Admin") {
                             if ($leshop != "all") {
                                 $conditions[] = "user IN (SELECT username FROM tbl_user WHERE magasin = :leshop)";
                                 $params[':leshop'] = $leshop;
                             }
                         } else {
-                            // Non-Admin : restreint à son magasin
                             $conditions[] = "user IN (SELECT username FROM tbl_user WHERE magasin = :magasin)";
                             $params[':magasin'] = $magasin;
                         }
 
-                        // NOUVEAU: Logique Opérateur Spécifique
+                        // Filtre Opérateur
                         if ($op_filter != 'all') {
                             $conditions[] = "user = :op_user";
                             $params[':op_user'] = $op_filter;
                         }
 
-                        // Construction finale
                         if (!empty($conditions)) {
                             $sql .= " WHERE " . implode(" AND ", $conditions);
                         }
@@ -226,39 +218,94 @@ include("include/stat_op_caisse.php");
                         $select = $pdo->prepare($sql);
                         $select->execute($params);
 
+                        // INITIALISATION DE LA VARIABLE QUI VA CONTENIR TOUTES LES MODALES
+                        $modals_html_output = "";
+
                         while ($row = $select->fetch(PDO::FETCH_OBJ)) {
+                            // Fetch Invoice Details
+                            $stmt_details = $pdo->prepare("SELECT * FROM tbl_invoice_detail WHERE invoice_id = :iid");
+                            $stmt_details->execute([':iid' => $row->invoice_id]);
+                            $invoice_details = $stmt_details->fetchAll(PDO::FETCH_ASSOC);
                         ?>
                             <tr>
                                 <td><?php echo $no++; ?></td>
+                                <td><?php echo $row->invoice_id; ?></td>
                                 <td class="text-uppercase"><?php echo $row->cashier_name; ?></td>
-                                <td class="text-uppercase">
-                                    <?php
-                                    $s = $row->id_client;
-                                    $sel = $pdo->prepare("SELECT * FROM users WHERE username=:username");
-                                    $sel->bindParam(':username', $s);
-                                    $sel->execute();
-                                    $row1 = $sel->fetch(PDO::FETCH_ASSOC);
-
-                                    echo $row->id_client . "_" . ($row1 ? $row1['firstname'] . " " . $row1['middlename'] . " " . $row1['lastname'] : 'Client Inconnu');
-                                    ?>
-                                </td>
-
                                 <td><?php echo $row->order_date; ?></td>
                                 <td><?php echo number_format($row->total); ?>&nbsp; FCFA</td>
                                 <td><?php echo number_format($row->tva); ?>&nbsp; FCFA</td>
                                 <td><?php echo $row->payment_mode; ?>&nbsp;</td>
                                 <td>
+                                    <button type="button" class="btn btn-primary btn-sm" data-toggle="modal" data-target="#view_modal_<?php echo $row->invoice_id; ?>" title="Voir Détails">
+                                        <i class="fa fa-eye"></i>
+                                    </button>
+
+                                    <button type="button" onclick="openDesktopReceiptWindow(<?php echo $row->invoice_id; ?>)" class="btn btn-info btn-sm" title="Imprimer le Reçu"><i class="fa fa-print"></i></button>
+
                                     <?php
-                                    // Bouton Supprimer (Annuler) : Seulement si Admin ou Responsable (jour même)
-                                    // ET seulement si la vue actuelle est 'saved' (on n'annule pas ce qui est déjà annulé)
                                     if ($view_status == 'saved' && (($_SESSION['role'] ?? '') == "Admin" || (($_SESSION['role'] ?? '') == "Responsable" && $row->order_date == $today_date))) { ?>
                                         <a href="order.php?id=<?php echo $row->invoice_id; ?>&view_status=saved" onclick="return confirm('Êtes-vous sûr de vouloir ANNULER cette transaction ? Le stock sera restauré.')" class="btn btn-danger btn-sm" title="Annuler la transaction"><i class="fa fa-trash"></i></a>
                                     <?php } ?>
-
-                                    <button type="button" onclick="openDesktopReceiptWindow(<?php echo $row->invoice_id; ?>)" class="btn btn-info btn-sm" title="Imprimer le Reçu"><i class="fa fa-print"></i></button>
                                 </td>
                             </tr>
+
                         <?php
+                            // --- CONSTRUCTION DE LA MODALE (STOCKÉE DANS UNE VARIABLE) ---
+                            // Nous stockons le HTML dans $modals_html_output au lieu de l'afficher directement
+                            // pour éviter de casser la structure du tableau HTML.
+
+                            $modals_html_output .= '
+                            <div class="modal fade" id="view_modal_' . $row->invoice_id . '" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
+                                <div class="modal-dialog" role="document">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                                            <h4 class="modal-title">Détails Facture N° <b>' . $row->invoice_id . '</b></h4>
+                                        </div>
+                                        <div class="modal-body">
+                                            <div class="row">
+                                                <div class="col-md-12">
+                                                    <p><strong>Caissier:</strong> ' . $row->cashier_name . ' | <strong>Date:</strong> ' . $row->order_date . '</p>
+                                                    <table class="table table-bordered table-condensed">
+                                                        <thead>
+                                                            <tr class="active">
+                                                                <th>Produit</th>
+                                                                <th>Qté</th>
+                                                                <th>Prix U.</th>
+                                                                <th>Total</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>';
+
+                            foreach ($invoice_details as $detail) {
+                                $modals_html_output .= '
+                                                            <tr>
+                                                                <td>' . $detail['product_name'] . ' <br><small>(' . $detail['product_code'] . ')</small></td>
+                                                                <td class="text-center">' . $detail['qty'] . '</td>
+                                                                <td class="text-right">' . number_format($detail['price']) . '</td>
+                                                                <td class="text-right"><strong>' . number_format($detail['total']) . '</strong></td>
+                                                            </tr>';
+                            }
+
+                            $modals_html_output .= '
+                                                        </tbody>
+                                                        <tfoot>
+                                                            <tr>
+                                                                <td colspan="3" class="text-right"><strong>TOTAL</strong></td>
+                                                                <td class="text-right"><strong>' . number_format($row->total) . ' FCFA</strong></td>
+                                                            </tr>
+                                                        </tfoot>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-default" data-dismiss="modal">Fermer</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>';
+                            // --- FIN CONSTRUCTION MODALE ---
                         }
                         ?>
                     </tbody>
@@ -267,17 +314,22 @@ include("include/stat_op_caisse.php");
         </div>
     </div>
 </section>
-</div>
+
+<?php echo $modals_html_output; ?>
 
 
+<?php
+// Inclusion du Footer (qui ferme la div content-wrapper, etc.)
+include_once 'inc/footer_all.php';
+?>
 
-
-
-</section>
-</div>
 <script>
     $(document).ready(function() {
-        $('#myOrder').DataTable();
+        $('#myOrder').DataTable({
+            "order": [
+                [1, "desc"]
+            ]
+        });
     });
 </script>
 
@@ -318,32 +370,10 @@ include("include/stat_op_caisse.php");
     }
 
     function openDesktopReceiptWindow(invoiceId) {
-        // 1. Ouvrir une fenêtre pour la page 'nota.php' avec l'ID de la facture ET le paramètre 'output=view'
-        var url = 'misc/nota.php?id=' + invoiceId + '&output=view'; // Ajout de &output=view
+        var url = 'print_receipt.php?id=' + invoiceId;
         var windowName = 'ReceiptPrint' + invoiceId;
-        var features = 'width=400,height=600,scrollbars=yes,resizable=yes,location=no,menubar=no,toolbar=no,status=no';
+        var features = 'width=450,height=600,scrollbars=yes,resizable=yes,location=no,menubar=no,toolbar=no,status=no';
         var newWindow = window.open(url, windowName, features);
-
-        // 2. Tenter d'imprimer dès que la fenêtre de reçu est chargée
-        newWindow.onload = function() {
-            // Le contenu du PDF devrait s'afficher directement dans la fenêtre du navigateur,
-            // déclenchant ainsi la boîte de dialogue d'impression native du navigateur
-            // pour le PDF (d'où l'Output('I') dans nota.php).
-            // window.print() peut ne pas être nécessaire ou fonctionner différemment pour les PDF.
-            // Si le navigateur ne déclenche pas l'impression pour le PDF, on peut le laisser:
-            // newWindow.print(); 
-        };
-
-        // 3. (Optionnel) Ajoutons une redirection silencieuse pour simuler l'action "après impression"
-        // comme dans votre premier exemple de code.
-        // Cette étape est souvent difficile à gérer de manière fiable avec les popups PDF.
-        // L'implémentation ci-dessous n'est qu'un exemple.
-        setTimeout(function() {
-            // Rediriger ou fermer la fenêtre après un délai, pour nettoyer
-            // newWindow.close(); // Si vous voulez fermer après impression
-            // Ou
-            // newWindow.location.href = 'misc/nota.php?id=' + invoiceId + '&output=silent';
-        }, 1000); // 1 seconde d'attente
     }
 </script>
 
@@ -371,6 +401,10 @@ include("include/stat_op_caisse.php");
     .color {
         backgroundColor: rgb(120, 102, 102);
     }
+
+    .modal-body .table th {
+        background-color: #f5f5f5;
+    }
 </style>
 
 <script>
@@ -392,7 +426,3 @@ include("include/stat_op_caisse.php");
         });
     }
 </script>
-
-<?php
-include_once 'inc/footer_all.php';
-?>

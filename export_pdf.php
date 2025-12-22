@@ -125,7 +125,7 @@ class PDF extends FPDF
         $w = array(15, 40, 50, 30, 40, 35, 40);
 
         // En-tête du tableau
-        $header = array('No', utf8_decode('Opérateur'), 'Client ID', 'Date', 'Montant Total', 'TVA', 'Mode Paiement');
+        $header = array('No', 'Num Invoice', utf8_decode('Opérateur'), 'Date', 'Montant Total', 'TVA', 'Mode Paiement');
         for ($i = 0; $i < count($header); $i++) {
             $this->Cell($w[$i], 8, $header[$i], 1, 0, 'C', true);
         }
@@ -140,8 +140,8 @@ class PDF extends FPDF
 
         foreach ($transactions as $row) {
             $this->Cell($w[0], 7, $i++, 1, 0, 'C');
-            $this->Cell($w[1], 7, utf8_decode($row['cashier_name']), 1, 0, 'L');
-            $this->Cell($w[2], 7, utf8_decode($row['id_client']), 1, 0, 'L');
+            $this->Cell($w[1], 7, utf8_decode($row['invoice_id']), 1, 0, 'L');
+            $this->Cell($w[2], 7, utf8_decode($row['cashier_name']), 1, 0, 'L');
             $this->Cell($w[3], 7, utf8_decode($row['order_date']), 1, 0, 'C');
             $this->Cell($w[4], 7, number_format($row['total'], 0, ',', ' ') . ' FCFA', 1, 0, 'R');
             $this->Cell($w[5], 7, number_format($row['tva'], 0, ',', ' ') . ' FCFA', 1, 0, 'R');

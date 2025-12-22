@@ -177,8 +177,8 @@ try {
         <thead>
             <tr>
                 <th style="width:5%;">No</th>
+                <th style="width:20px;">Num Invoice</th>
                 <th style="width:15%;">Opérateur</th>
-                <th style="width:20%;">Client (ID)</th>
                 <th style="width:15%;">Date</th>
                 <th style="width:15%;">Montant TTC</th>
                 <th style="width:15%;">TVA</th>
@@ -212,8 +212,8 @@ try {
             ?>
                     <tr>
                         <td class="text-center"><?php echo $no++; ?></td>
+                        <td class="text-center"><?php echo htmlspecialchars($row->invoice_id); ?></td>
                         <td class="text-uppercase"><?php echo htmlspecialchars($row->cashier_name); ?></td>
-                        <td class="text-uppercase"><?php echo htmlspecialchars($client_display); ?></td>
                         <td class="text-center"><?php echo htmlspecialchars($row->order_date); ?></td>
                         <td class="text-right"><?php echo number_format($row->total, 0, ',', ' '); ?> FCFA</td>
                         <td class="text-right"><?php echo number_format($row->tva, 0, ',', ' '); ?> FCFA</td>

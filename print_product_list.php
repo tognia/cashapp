@@ -114,6 +114,12 @@ $select->execute();
             display: none !important;
         }
 
+        .product-cell {
+            text-align: center;
+            vertical-align: middle;
+            /* Centers content vertically if the row is tall */
+        }
+
         /* Lancer la boîte de dialogue d'impression automatiquement */
         @media print {
             .btn-print {
@@ -135,12 +141,10 @@ $select->execute();
             <tr>
                 <th>No</th>
                 <th>Code</th>
-                <th>Libellé Produit</th>
                 <th>Catégorie</th>
                 <th>Fournisseur</th>
                 <th>Stock Actuel</th>
                 <th>Stock Min. (Alerte)</th>
-                <th>Prix Vente (FCFA)</th>
                 <th>Emplacement Dépôt</th>
             </tr>
         </thead>
@@ -160,8 +164,11 @@ $select->execute();
             ?>
                 <tr>
                     <td><?php echo $no++; ?></td>
-                    <td><?php echo htmlspecialchars($row->product_code); ?></td>
-                    <td><?php echo htmlspecialchars($row->product_name); ?></td>
+                    <td class="product-cell">
+                        <?php echo htmlspecialchars($row->product_code); ?><br />
+                        <?php echo htmlspecialchars($row->product_name); ?><br />
+                        <?php echo number_format($row->sell_price, 0, null, " "); ?> FCFA
+                    </td>
                     <td><?php echo htmlspecialchars($row->product_category); ?></td>
                     <td><?php echo htmlspecialchars($row->supplier); ?></td>
                     <td>
@@ -170,7 +177,7 @@ $select->execute();
                         </span>
                     </td>
                     <td><?php echo $row->min_stock; ?></td>
-                    <td><?php echo number_format($row->sell_price, 0, null, " "); ?></td>
+
                     <td><?php echo htmlspecialchars($row->place_in_storeroom); ?></td>
                 </tr>
             <?php
