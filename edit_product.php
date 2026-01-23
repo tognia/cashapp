@@ -320,7 +320,7 @@ include_once 'inc/header_all.php';
                     <div class="col-md-4">
                         <div class="form-group">
                             <label for="">Stock</label>
-                            <input type="number" min="1" step="1" class="form-control" name="stock" value="<?php echo $stock_db; ?>" required>
+                            <input type="number" step="1" class="form-control" name="stock" value="<?php echo $stock_db; ?>" required>
                         </div>
                         <div class="form-group">
                             <label for="">Stock Minimal</label>

@@ -166,6 +166,9 @@ $agencies_list = ($_SESSION["role"] == "Admin" || $_SESSION["role"] == "storekee
                 <div class="pull-right">
                     <button type="button" class="btn btn-primary btn-sm" data-toggle="modal" data-target="#massTransferModal"><i class="fa fa-truck"></i> Transfert Entrepôt</button>
                     <a href="edit_stock_shop_validation.php" class="btn btn-success btn-sm"><i class="fa fa-cubes"></i> Réceptions en attente</a>
+                    <a href="product_shop_item_inventory.php" class="btn btn-warning btn-sm">
+                        <i class="fa fa-file-text-o"></i> Rapport d'Expéditions
+                    </a>
                 </div>
             </div>
 
