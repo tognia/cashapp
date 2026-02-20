@@ -2,6 +2,7 @@
 // order.php
 include_once 'db/connect_db.php';
 
+// 1. Session & Access Control
 if (empty($_SESSION['user_name'])) {
     header('location:index.php');
     exit();
@@ -17,8 +18,10 @@ error_reporting(0);
 $id = $_GET['id'] ?? null;
 $today_date = date("Y-m-d");
 $magasin = $_SESSION['magasin'] ?? '';
+$view_status = $_REQUEST['view_status'] ?? 'saved';
+$is_load_all = isset($_GET['load_all']) && $_GET['load_all'] == 1;
 
-// --- LOGIQUE D'ANNULATION ---
+// --- LOGIQUE D'ANNULATION (Simplified for clarity) ---
 if ($id) {
     try {
         $pdo->beginTransaction();
@@ -43,124 +46,135 @@ if ($id) {
             $update = $pdo->prepare("UPDATE tbl_invoice SET status = 'canceled' WHERE invoice_id = :id");
             $update->execute([':id' => $id]);
             $pdo->commit();
-            echo '<script>jQuery(function(){ swal("Succès", "Transaction annulée", "success"); });</script>';
+            echo '<script>jQuery(function(){ swal("Info", "Transaction annulée.", "success"); });</script>';
         }
     } catch (Exception $e) {
         $pdo->rollback();
     }
 }
 
+// Prepare export parameters for PDF/Excel/Print
 $export_params = http_build_query($_REQUEST);
-$view_status = $_REQUEST['view_status'] ?? 'saved';
 include("include/stat_op_caisse.php");
 ?>
 
 <section class="content container-fluid">
     <div class="box box-success">
         <div class="box-header with-border">
-            <h3 class="box-title">Transactions : <?php echo ($view_status == 'saved') ? 'VALIDÉES' : 'ANNULÉES'; ?></h3>
+            <h3 class="box-title">Transactions :
+                <?php echo ($view_status == 'saved') ? '<span class="label label-success">VALIDÉES</span>' : '<span class="label label-danger">ANNULÉES</span>'; ?>
+            </h3>
+
             <div class="pull-right">
-                <a href="order.php?view_status=saved" class="btn btn-sm btn-default">Validées</a>
-                <a href="order.php?view_status=canceled" class="btn btn-sm btn-default">Annulées</a>
-                <a href="create_order.php" class="btn btn-info btn-sm nav-link">Nouvelle Transaction</a>
+                <div class="btn-group" style="margin-right: 10px;">
+                    <a href="order.php?view_status=saved" class="btn btn-sm <?php echo ($view_status == 'saved') ? 'btn-success active' : 'btn-default'; ?>">Validées</a>
+                    <a href="order.php?view_status=canceled" class="btn btn-sm <?php echo ($view_status == 'canceled') ? 'btn-danger active' : 'btn-default'; ?>">Annulées</a>
+                </div>
+
+                <button onclick="openDesktopExportWindow('print_current_view.php', '<?php echo $export_params; ?>', 'PrintListView')" class="btn btn-warning btn-sm" title="Imprimer">
+                    <i class="fa fa-print"></i>
+                </button>
+
+                <button type="button" onclick="openDesktopExportWindow('export_pdf.php', '<?php echo $export_params; ?>', 'SalesPDF')" class="btn btn-primary btn-sm" title="PDF">
+                    <i class="fa fa-file-pdf-o"></i>
+                </button>
+
+                <button type="button" onclick="downloadFile('export_excel.php', '<?php echo $export_params; ?>')" class="btn btn-success btn-sm" title="Excel">
+                    <i class="fa fa-file-excel-o"></i>
+                </button>
+
+                <?php if (!$is_load_all): ?>
+                    <a href="order.php?<?php echo http_build_query(array_merge($_GET, ['load_all' => 1])); ?>" class="btn btn-danger btn-sm" style="margin-left:5px;">
+                        <i class="fa fa-database"></i> Charger TOUT
+                    </a>
+                <?php else: ?>
+                    <a href="order.php?<?php echo http_build_query(array_merge($_GET, ['load_all' => 0])); ?>" class="btn btn-default btn-sm" style="margin-left:5px;">
+                        <i class="fa fa-bolt"></i> Mode Rapide
+                    </a>
+                <?php endif; ?>
+
+                <a href="create_order.php" class="btn btn-info btn-sm nav-link" style="margin-left:10px;">Nouvelle Transaction</a>
             </div>
         </div>
 
         <div class="box-body">
-            <table class="table table-striped" id="myOrder">
-                <thead>
-                    <tr>
-                        <th>No</th>
-                        <th>Facture</th>
-                        <th>Opérateur</th>
-                        <th>Date</th>
-                        <th>Montant</th>
-                        <th>Mode</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php
-                    $no = 1;
-                    $conditions = [];
-                    $params = [];
+            <div style="overflow-x:auto;">
+                <table class="table table-striped" id="myOrder">
+                    <thead>
+                        <tr>
+                            <th>No</th>
+                            <th>Facture</th>
+                            <th>Opérateur</th>
+                            <th>Date</th>
+                            <th>Montant</th>
+                            <th>Mode</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php
+                        $conditions = ["status = :status"];
+                        $params = [':status' => $view_status];
 
-                    // --- Base Query ---
-                    $sql = "SELECT * FROM tbl_invoice";
-
-                    // --- 1. Filter by Status (Always present) ---
-                    $conditions[] = "status = :status";
-                    $params[':status'] = $view_status;
-
-                    // --- 2. Filter by Date Range ---
-                    // Check both POST and GET to ensure filtering persists
-                    $date1 = $_REQUEST['date_1'] ?? '';
-                    $date2 = $_REQUEST['date_2'] ?? '';
-
-                    if (!empty($date1) && !empty($date2)) {
-                        $conditions[] = "order_date BETWEEN :fromdate AND :todate";
-                        $params[':fromdate'] = $date1;
-                        $params[':todate'] = $date2;
-                    }
-
-                    // --- 3. Filter by Magasin (Security/Role check) ---
-                    if ($_SESSION['role'] == "Admin") {
-                        $leshop = $_REQUEST['shop'] ?? 'all';
-                        if ($leshop != "all") {
-                            $conditions[] = "user IN (SELECT username FROM tbl_user WHERE magasin = :leshop)";
-                            $params[':leshop'] = $leshop;
+                        // Restore Date Filters logic
+                        $date1 = $_REQUEST['date_1'] ?? '';
+                        $date2 = $_REQUEST['date_2'] ?? '';
+                        if (!empty($date1) && !empty($date2)) {
+                            $conditions[] = "order_date BETWEEN :d1 AND :d2";
+                            $params[':d1'] = $date1;
+                            $params[':d2'] = $date2;
                         }
-                    } else {
-                        // Non-admins only see their own store's data
-                        $conditions[] = "user IN (SELECT username FROM tbl_user WHERE magasin = :magasin)";
-                        $params[':magasin'] = $magasin;
-                    }
 
-                    // --- 4. Filter by Operator ---
-                    $op_filter = $_REQUEST['operator_filter'] ?? 'all';
-                    if ($op_filter != 'all') {
-                        $conditions[] = "user = :op_user";
-                        $params[':op_user'] = $op_filter;
-                    }
-
-                    // --- Build Final SQL ---
-                    if (!empty($conditions)) {
-                        $sql .= " WHERE " . implode(" AND ", $conditions);
-                    }
-
-                    $sql .= " ORDER BY invoice_id DESC";
-                    // We removed the LIMIT so the date filter can scan the entire history
-
-                    $select = $pdo->prepare($sql);
-                    $select->execute($params);
-
-                    while ($row = $select->fetch(PDO::FETCH_OBJ)) {
-                        echo '<tr>
-            <td>' . $no++ . '</td>
-            <td>' . $row->invoice_id . '</td>
-            <td class="text-uppercase">' . $row->cashier_name . '</td>
-            <td>' . date("d-m-Y", strtotime($row->order_date)) . '</td>
-            <td><b>' . number_format($row->total) . '</b> <small>FCFA</small></td>
-            <td>' . $row->payment_mode . '</td>
-            <td>
-                <button type="button" class="btn btn-primary btn-sm btn-view" data-id="' . $row->invoice_id . '" title="Voir Détails">
-                    <i class="fa fa-eye"></i>
-                </button>
-                <button type="button" onclick="openDesktopReceiptWindow(' . $row->invoice_id . ')" class="btn btn-info btn-sm" title="Imprimer">
-                    <i class="fa fa-print"></i>
-                </button>';
-
-                        // Cancellation logic (Only for Admin or Responsable on today's date)
-                        if ($view_status == 'saved' && ($_SESSION['role'] == "Admin" || ($_SESSION['role'] == "Responsable" && $row->order_date == $today_date))) {
-                            echo ' <a href="order.php?id=' . $row->invoice_id . '&view_status=saved" 
-                           onclick="return confirm(\'Annuler cette transaction ?\')" 
-                           class="btn btn-danger btn-sm"><i class="fa fa-trash"></i></a>';
+                        // Restore Shop Filter logic
+                        if ($_SESSION['role'] == "Admin") {
+                            $leshop = $_REQUEST['shop'] ?? 'all';
+                            if ($leshop != "all") {
+                                $conditions[] = "user IN (SELECT username FROM tbl_user WHERE magasin = :leshop)";
+                                $params[':leshop'] = $leshop;
+                            }
+                        } else {
+                            $conditions[] = "user IN (SELECT username FROM tbl_user WHERE magasin = :magasin)";
+                            $params[':magasin'] = $magasin;
                         }
-                        echo '</td></tr>';
-                    }
-                    ?>
-                </tbody>
-            </table>
+
+                        $sql = "SELECT * FROM tbl_invoice WHERE " . implode(" AND ", $conditions) . " ORDER BY invoice_id DESC";
+                        if (!$is_load_all) {
+                            $sql .= " LIMIT 1000";
+                        }
+
+                        $select = $pdo->prepare($sql);
+                        $select->execute($params);
+                        $no = 1;
+
+                        while ($row = $select->fetch(PDO::FETCH_OBJ)) {
+                        ?>
+                            <tr>
+                                <td><?php echo $no++; ?></td>
+                                <td><?php echo $row->invoice_id; ?></td>
+                                <td class="text-uppercase"><?php echo $row->cashier_name; ?></td>
+                                <td><?php echo date("d-m-Y", strtotime($row->order_date)); ?></td>
+                                <td><b><?php echo number_format($row->total); ?></b> <small>FCFA</small></td>
+                                <td><?php echo $row->payment_mode; ?></td>
+                                <td>
+                                    <button type="button" class="btn btn-primary btn-sm btn-view" data-id="<?php echo $row->invoice_id; ?>">
+                                        <i class="fa fa-eye"></i>
+                                    </button>
+                                    <button type="button" onclick="openDesktopReceiptWindow(<?php echo $row->invoice_id; ?>)" class="btn btn-info btn-sm">
+                                        <i class="fa fa-print"></i>
+                                    </button>
+                                    <?php if ($view_status == 'saved' && ($_SESSION['role'] == "Admin" || ($_SESSION['role'] == "Responsable" && $row->order_date == $today_date))): ?>
+                                        <a href="order.php?id=<?php echo $row->invoice_id; ?>&view_status=saved" onclick="return confirm('Annuler?')" class="btn btn-danger btn-sm">
+                                            <i class="fa fa-trash"></i>
+                                        </a>
+                                    <?php endif; ?>
+                                </td>
+                            </tr>
+                        <?php
+                        }
+                        ?>
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 </section>
@@ -170,10 +184,9 @@ include("include/stat_op_caisse.php");
         <div class="modal-content">
             <div class="modal-header">
                 <button type="button" class="close" data-dismiss="modal">&times;</button>
-                <h4 class="modal-title">Détails de la Facture</h4>
+                <h4 class="modal-title">Détails Facture N° <b id="display_inv_id"></b></h4>
             </div>
-            <div class="modal-body" id="details-body">
-            </div>
+            <div class="modal-body" id="details-body"></div>
         </div>
     </div>
 </div>
@@ -182,29 +195,51 @@ include("include/stat_op_caisse.php");
 
 <script>
     $(document).ready(function() {
-        // 1. FAST NAVIGATION: Stop page work when clicking links
-        $('.nav-link, a').on('click', function() {
-            if (!$(this).hasClass('dropdown-toggle')) {
-                window.stop(); // Stops the browser from finishing the current page render
-            }
+        // 1. FAST NAVIGATION Logic
+        $('.nav-link, a.btn-info').on('click', function() {
+            window.stop();
         });
 
-        // 2. DATATABLE OPTIMIZATION
+        // 2. DATATABLE
         $('#myOrder').DataTable({
             "order": [
                 [1, "desc"]
             ],
-            "deferRender": true // Only renders rows when they come into view
+            "pageLength": 25,
+            "deferRender": true
         });
 
-        // 3. AJAX MODAL LOAD (No more N+1 queries)
+        // 3. AJAX MODAL
         $('.btn-view').on('click', function() {
             var invId = $(this).data('id');
-            $('#details-body').html('<div class="text-center"><i class="fa fa-refresh fa-spin"></i> Chargement...</div>');
+            $('#display_inv_id').text(invId);
+            $('#details-body').html('<div class="text-center"><i class="fa fa-refresh fa-spin fa-2x"></i></div>');
             $('#modal-details').modal('show');
             $('#details-body').load('fetch_details.php?id=' + invId);
         });
     });
+
+    // 4. RESTORED HELPER FUNCTIONS FOR EXPORT
+    function openDesktopExportWindow(page, params, windowName) {
+        var url = page + '?' + params;
+        var features = 'width=1000,height=700,scrollbars=yes,resizable=yes';
+        var newWindow = window.open(url, windowName, features);
+        if (page === 'print_current_view.php') {
+            newWindow.onload = function() {
+                newWindow.print();
+            };
+        }
+    }
+
+    function downloadFile(page, params) {
+        var url = page + '?' + params;
+        var link = document.createElement('a');
+        link.href = url;
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
 
     function openDesktopReceiptWindow(invoiceId) {
         window.open('print_receipt.php?id=' + invoiceId, 'Receipt', 'width=450,height=600');
